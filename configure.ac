@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(hexter, 0.5.8, musound-at-jps-dot-net)
+AC_INIT(hexter, 0.5.9, musound-at-jps-dot-net)
 
 AC_CONFIG_SRCDIR(src/hexter.c)
 AM_INIT_AUTOMAKE
@@ -93,7 +93,11 @@ if test "x$GCC" = "xyes"; then
   esac
   case " $CFLAGS " in
   *[\ \	]-ffast-math[\ \	]*) ;;
-  *) CFLAGS="$CFLAGS -fomit-frame-pointer -funroll-loops -finline-functions -ffast-math -finline-limit=5000 -Winline" ;;
+  *) CFLAGS="$CFLAGS -fomit-frame-pointer -funroll-loops -finline-functions -ffast-math -Winline" ;;
+  esac
+  # add '-finline-limit=...' only for GCC 3.x:
+  case `$CC -dumpversion 2>/dev/null` in
+  3.*) CFLAGS="$CFLAGS -finline-limit=5000" ;;
   esac
 fi
 changequote([,])dnl

@@ -1,12 +1,12 @@
 ## Process this file with automake to produce Makefile.in
 
 if BUILD_TEXTUI
-bin_PROGRAMS = hexter_text
+ui_PROGRAMS = hexter_text
 else
-bin_PROGRAMS = hexter_gtk
+ui_PROGRAMS = hexter_gtk
 endif
 
-bindir = $(libdir)/dssi/hexter
+uidir = $(libdir)/dssi/hexter
 
 plugindir = $(libdir)/dssi
 
