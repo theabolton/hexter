@@ -16,7 +16,7 @@
  * PURPOSE.  See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public
- * License along with this library; if not, write to the Free
+ * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307, USA.
  */
@@ -30,7 +30,7 @@
 #include "hexter_types.h"
 #include "hexter_synth.h"
 #include "dx7_voice_data.h"
-#include "dx7_voice.h"  /* -FIX- would be nice to get rid of this */
+#include "dx7_voice.h"
 
 extern hexter_synth_t hexter_synth;
 
@@ -349,7 +349,22 @@ hexter_instance_damp_voices(hexter_instance_t* instance)
 void
 hexter_instance_update_wheel_mod(hexter_instance_t* instance)
 {
-    /* !FIX! instance->mod_wheel = 1.0f - (float)synth->cc[MIDI_CTL_MSB_MODWHEEL] / 127.0f; */
+    /* instance->mod_wheel = (float)(instance->cc[MIDI_CTL_MSB_MODWHEEL] * 128 +
+     *                               instance->cc[MIDI_CTL_LSB_MODWHEEL]) / 16256.0f;
+     * if (instance->mod_wheel < 0.0f)
+     *     instance->mod_wheel = 0.0f; -FIX- */
+}
+
+/*
+ * hexter_instance_update_volume
+ */
+void
+hexter_instance_update_volume(hexter_instance_t* instance)
+{
+    instance->cc_volume = instance->cc[MIDI_CTL_MSB_MAIN_VOLUME] * 128 +
+                          instance->cc[MIDI_CTL_LSB_MAIN_VOLUME];
+    if (instance->cc_volume > 16256)
+        instance->cc_volume = 16256;
 }
 
 /*
@@ -364,7 +379,13 @@ hexter_instance_control_change(hexter_instance_t *instance, unsigned int param,
     switch (param) {
 
       case MIDI_CTL_MSB_MODWHEEL:
+      case MIDI_CTL_LSB_MODWHEEL:
         hexter_instance_update_wheel_mod(instance);
+        break;
+
+      case MIDI_CTL_MSB_MAIN_VOLUME:
+      case MIDI_CTL_LSB_MAIN_VOLUME:
+        hexter_instance_update_volume(instance);
         break;
 
       case MIDI_CTL_SUSTAIN:
@@ -468,13 +489,10 @@ hexter_instance_init_controls(hexter_instance_t *instance)
     instance->pitch_wheel_sensitivity = 2;  /* two semi-tones */
     instance->pitch_wheel = 0;
     instance->pitch_bend = 0.0;
+    instance->cc[MIDI_CTL_MSB_MAIN_VOLUME] = 127; /* full volume */
 
-    /* set volume (MSB 7 and LSB 39) */
-    instance->cc[7] = 127;
-    instance->cc[39] = 127;
-
-    // !FIX! move this into loop below?:
     hexter_instance_update_wheel_mod(instance);
+    hexter_instance_update_volume(instance);
 
     /* check if any playing voices need updating */
     for (i = 0; i < hexter_synth.global_polyphony; i++) {
@@ -497,7 +515,7 @@ hexter_instance_select_program(hexter_instance_t *instance, unsigned long bank,
     if (program >= 128) return;
     instance->current_program = program;
     if (instance->overlay_program == program) { /* edit buffer applies */
-        memcpy(instance->current_patch_buffer, instance->overlay_patch_buffer, DX7_VOICE_SIZE_UNPACKED); // !FIX!
+        memcpy(instance->current_patch_buffer, instance->overlay_patch_buffer, DX7_VOICE_SIZE_UNPACKED);
     } else {
         dx7_patch_unpack(instance->patches, program, instance->current_patch_buffer);
     }
@@ -520,7 +538,7 @@ hexter_instance_set_program_descriptor(hexter_instance_t *instance,
     }
     pd->Bank = bank;
     pd->Program = program;
-    dx7_voice_copy_name(name, &instance->patches[program]);  /* !FIX! needs to know patch size */
+    dx7_voice_copy_name(name, &instance->patches[program]);
     pd->Name = name;
     return 1;
 }
@@ -538,15 +556,14 @@ hexter_instance_handle_patches(hexter_instance_t *instance, const char *key,
 
     section = key[7] - '0';
     if (section < 0 || section > 3)
-        return dssi_configure_message("patch configuration failed: invalid section '%c'", key[7]);
+        return dssp_error_message("patch configuration failed: invalid section '%c'", key[7]);
 
     pthread_mutex_lock(&instance->patches_mutex);
 
-    /* !FIX! hide this in dx7_voice_data.c? */
     if (!decode_7in6(value, 32 * sizeof(dx7_patch_t),
                      (uint8_t *)&instance->patches[section * 32])) {
         pthread_mutex_unlock(&instance->patches_mutex);
-        return dssi_configure_message("patch configuration failed: corrupt data");
+        return dssp_error_message("patch configuration failed: corrupt data");
     }
 
     if ((instance->current_program / 32) == section &&
@@ -585,16 +602,15 @@ hexter_instance_handle_edit_buffer(hexter_instance_t *instance,
 
         DEBUG_MESSAGE(DB_DATA, " hexter_instance_handle_edit_buffer: received new overlay\n");
 
-        /* !FIX! hide this in dx7_voice_data.c? */
         if (!decode_7in6(value, sizeof(edit_buffer), (uint8_t *)&edit_buffer)) {
             pthread_mutex_unlock(&instance->patches_mutex);
-            return dssi_configure_message("patch edit failed: corrupt data");
+            return dssp_error_message("patch edit failed: corrupt data");
         }
 
         instance->overlay_program = edit_buffer.program;
-        memcpy(instance->overlay_patch_buffer, edit_buffer.buffer, DX7_VOICE_SIZE_UNPACKED); // !FIX!
+        memcpy(instance->overlay_patch_buffer, edit_buffer.buffer, DX7_VOICE_SIZE_UNPACKED);
         if (instance->current_program == instance->overlay_program) { /* applies to current patch also */
-            memcpy(instance->current_patch_buffer, instance->overlay_patch_buffer, DX7_VOICE_SIZE_UNPACKED); // !FIX!
+            memcpy(instance->current_patch_buffer, instance->overlay_patch_buffer, DX7_VOICE_SIZE_UNPACKED);
         }
     }
 
@@ -618,7 +634,7 @@ hexter_instance_handle_monophonic(hexter_instance_t *instance, const char *value
     else if (!strcmp(value, "off"))  mode = DSSP_MONO_MODE_OFF;
 
     if (mode == -1) {
-        return dssi_configure_message("error: monophonic value not recognized");
+        return dssp_error_message("error: monophonic value not recognized");
     }
 
     if (mode == DSSP_MONO_MODE_OFF) {  /* polyphonic mode */
@@ -657,7 +673,7 @@ hexter_instance_handle_polyphony(hexter_instance_t *instance, const char *value)
     dx7_voice_t *voice;
 
     if (polyphony < 1 || polyphony > HEXTER_MAX_POLYPHONY) {
-        return dssi_configure_message("error: polyphony value out of range");
+        return dssp_error_message("error: polyphony value out of range");
     }
     /* set the new limit */
     instance->polyphony = polyphony;
@@ -694,7 +710,7 @@ hexter_synth_handle_global_polyphony(const char *value)
     dx7_voice_t *voice;
 
     if (polyphony < 1 || polyphony > HEXTER_MAX_POLYPHONY) {
-        return dssi_configure_message("error: polyphony value out of range");
+        return dssp_error_message("error: polyphony value out of range");
     }
 
     dssp_voicelist_mutex_lock();

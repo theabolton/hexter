@@ -22,7 +22,7 @@
  * PURPOSE.  See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public
- * License along with this library; if not, write to the Free
+ * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307, USA.
  */
@@ -102,6 +102,13 @@ uint8_t dx7_voice_carriers[32] = {
     0x27, /* algorithm 30, operators 1, 2, 3, and 6 */
     0x1f,
     0x2f, /* algorithm 32, all operators */
+};
+
+float dx7_voice_carrier_count[32] = {
+    2.0f, 2.0f, 2.0f, 2.0f, 3.0f, 3.0f, 2.0f, 2.0f,
+    2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 1.0f,
+    1.0f, 1.0f, 3.0f, 3.0f, 4.0f, 4.0f, 4.0f, 5.0f,
+    5.0f, 3.0f, 3.0f, 3.0f, 4.0f, 4.0f, 5.0f, 6.0f
 };
 
 float dx7_voice_eg_rate_rise_duration[128] = {  /* generated from my f04new */

@@ -13,7 +13,7 @@
  * PURPOSE.  See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public
- * License along with this library; if not, write to the Free
+ * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307, USA.
  */
@@ -35,6 +35,7 @@
 
 GtkWidget *main_window;
 GtkObject *tuning_adj;
+GtkObject *volume_adj;
 GtkObject *polyphony_instance_adj;
 GtkObject *polyphony_global_adj;
 GtkWidget *monophonic_option_menu;
@@ -79,14 +80,16 @@ create_main_window (const char *tag)
     GtkWidget *menubar1;
     GtkWidget *file1;
     GtkWidget *file1_menu;
+#if !GTK_CHECK_VERSION(2, 0, 0)
     GtkAccelGroup *file1_menu_accels;
+    GtkAccelGroup *help1_menu_accels;
+#endif
     GtkWidget *menu_import;
     GtkWidget *menu_export;
     GtkWidget *separator1;
     GtkWidget *menu_quit;
     GtkWidget *help1;
     GtkWidget *help1_menu;
-    GtkAccelGroup *help1_menu_accels;
     GtkWidget *menu_about;
     GtkWidget *notebook1;
     GtkWidget *scrolledwindow1;
@@ -104,6 +107,7 @@ create_main_window (const char *tag)
     GtkWidget *frame14;
     GtkWidget *table16;
     GtkWidget *tuning;
+    GtkWidget *volume;
     GtkWidget *mono_mode_off;
     GtkWidget *mono_mode_on;
     GtkWidget *mono_mode_once;
@@ -114,6 +118,7 @@ create_main_window (const char *tag)
     GtkWidget *label42;
     GtkWidget *label43;
     GtkWidget *label43a;
+    GtkWidget *volume_label;
     GtkWidget *label44;
     GtkWidget *sysex_enable_button;
     GtkObject *sysex_channel_spin_adj;
@@ -157,7 +162,9 @@ create_main_window (const char *tag)
     gtk_object_set_data_full (GTK_OBJECT (main_window), "file1_menu", file1_menu,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_menu_item_set_submenu (GTK_MENU_ITEM (file1), file1_menu);
+#if !GTK_CHECK_VERSION(2, 0, 0)
     file1_menu_accels = gtk_menu_ensure_uline_accel_group (GTK_MENU (file1_menu));
+#endif
 
     menu_import = gtk_menu_item_new_with_label ("Import Patch Bank...");
     gtk_widget_ref (menu_import);
@@ -197,7 +204,7 @@ create_main_window (const char *tag)
                                 GDK_Q, GDK_CONTROL_MASK,
                                 GTK_ACCEL_VISIBLE);
 
-    help1 = gtk_menu_item_new_with_label ("Help");
+    help1 = gtk_menu_item_new_with_label ("About");
     gtk_widget_ref (help1);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "help1", help1,
                               (GtkDestroyNotify) gtk_widget_unref);
@@ -210,9 +217,11 @@ create_main_window (const char *tag)
     gtk_object_set_data_full (GTK_OBJECT (main_window), "help1_menu", help1_menu,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_menu_item_set_submenu (GTK_MENU_ITEM (help1), help1_menu);
+#if !GTK_CHECK_VERSION(2, 0, 0)
     help1_menu_accels = gtk_menu_ensure_uline_accel_group (GTK_MENU (help1_menu));
+#endif
 
-    menu_about = gtk_menu_item_new_with_label ("About");
+    menu_about = gtk_menu_item_new_with_label ("About hexter");
     gtk_widget_ref (menu_about);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "menu_about", menu_about,
                               (GtkDestroyNotify) gtk_widget_unref);
@@ -281,7 +290,7 @@ create_main_window (const char *tag)
     gtk_widget_show (frame14);
     gtk_box_pack_start (GTK_BOX (vbox2), frame14, TRUE, TRUE, 0);
 
-    table16 = gtk_table_new (2, 4, FALSE);
+    table16 = gtk_table_new (2, 5, FALSE);
     gtk_widget_ref (table16);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "table16", table16,
                               (GtkDestroyNotify) gtk_widget_unref);
@@ -314,12 +323,35 @@ create_main_window (const char *tag)
     gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON (tuning), GTK_UPDATE_IF_VALID);
     gtk_spin_button_set_numeric (GTK_SPIN_BUTTON (tuning), TRUE);
 
+    volume_label = gtk_label_new ("volume (dB)");
+    gtk_widget_ref (volume_label);
+    gtk_object_set_data_full (GTK_OBJECT (main_window), "volume_label", volume_label,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (volume_label);
+    gtk_table_attach (GTK_TABLE (table16), volume_label, 0, 1, 1, 2,
+                      (GtkAttachOptions) (GTK_FILL),
+                      (GtkAttachOptions) (0), 0, 0);
+    gtk_misc_set_alignment (GTK_MISC (volume_label), 0, 0.5);
+    gtk_misc_set_padding (GTK_MISC (volume_label), 2, 0);
+
+    volume_adj = gtk_adjustment_new (0.0, -70.0, 20.0, 0.1, 1, 1);
+    volume = gtk_spin_button_new (GTK_ADJUSTMENT (volume_adj), 1, 1);
+    gtk_widget_ref (volume);
+    gtk_object_set_data_full (GTK_OBJECT (main_window), "volume", volume,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (volume);
+    gtk_table_attach (GTK_TABLE (table16), volume, 1, 2, 1, 2,
+                      (GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
+                      (GtkAttachOptions) (GTK_FILL), 0, 0);
+    gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON (volume), GTK_UPDATE_IF_VALID);
+    gtk_spin_button_set_numeric (GTK_SPIN_BUTTON (volume), TRUE);
+
     monophonic_option_menu = gtk_option_menu_new ();
     gtk_widget_ref (monophonic_option_menu);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "monophonic_option_menu", monophonic_option_menu,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_widget_show (monophonic_option_menu);
-    gtk_table_attach (GTK_TABLE (table16), monophonic_option_menu, 1, 2, 3, 4,
+    gtk_table_attach (GTK_TABLE (table16), monophonic_option_menu, 1, 2, 4, 5,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
     optionmenu5_menu = gtk_menu_new ();
@@ -343,7 +375,7 @@ create_main_window (const char *tag)
     gtk_object_set_data_full (GTK_OBJECT (main_window), "polyphony_instance", polyphony_instance,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_widget_show (polyphony_instance);
-    gtk_table_attach (GTK_TABLE (table16), polyphony_instance, 1, 2, 1, 2,
+    gtk_table_attach (GTK_TABLE (table16), polyphony_instance, 1, 2, 2, 3,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
 
@@ -352,7 +384,7 @@ create_main_window (const char *tag)
     gtk_object_set_data_full (GTK_OBJECT (main_window), "label43", label43,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_widget_show (label43);
-    gtk_table_attach (GTK_TABLE (table16), label43, 0, 1, 1, 2,
+    gtk_table_attach (GTK_TABLE (table16), label43, 0, 1, 2, 3,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
     gtk_misc_set_alignment (GTK_MISC (label43), 0, 0.5);
@@ -364,7 +396,7 @@ create_main_window (const char *tag)
     gtk_object_set_data_full (GTK_OBJECT (main_window), "polyphony_global", polyphony_global,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_widget_show (polyphony_global);
-    gtk_table_attach (GTK_TABLE (table16), polyphony_global, 1, 2, 2, 3,
+    gtk_table_attach (GTK_TABLE (table16), polyphony_global, 1, 2, 3, 4,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
 
@@ -373,7 +405,7 @@ create_main_window (const char *tag)
     gtk_object_set_data_full (GTK_OBJECT (main_window), "label42", label42,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_widget_show (label42);
-    gtk_table_attach (GTK_TABLE (table16), label42, 0, 1, 2, 3,
+    gtk_table_attach (GTK_TABLE (table16), label42, 0, 1, 3, 4,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
     gtk_misc_set_alignment (GTK_MISC (label42), 0, 0.5);
@@ -384,7 +416,7 @@ create_main_window (const char *tag)
     gtk_object_set_data_full (GTK_OBJECT (main_window), "label44", label44,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_widget_show (label44);
-    gtk_table_attach (GTK_TABLE (table16), label44, 0, 1, 3, 4,
+    gtk_table_attach (GTK_TABLE (table16), label44, 0, 1, 4, 5,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
     gtk_misc_set_alignment (GTK_MISC (label44), 0, 0.5);
@@ -608,6 +640,9 @@ create_main_window (const char *tag)
     gtk_signal_connect (GTK_OBJECT (tuning_adj), "value_changed",
                         GTK_SIGNAL_FUNC(on_tuning_change),
                         NULL);
+    gtk_signal_connect (GTK_OBJECT (volume_adj), "value_changed",
+                        GTK_SIGNAL_FUNC(on_volume_change),
+                        NULL);
     gtk_signal_connect (GTK_OBJECT (polyphony_instance_adj), "value_changed",
                         GTK_SIGNAL_FUNC(on_polyphony_change),
                         (gpointer)0);
@@ -665,7 +700,8 @@ create_about_window (const char *tag)
     GtkWidget *frame1;
     GtkWidget *about_pixmap;
     GtkWidget *closeabout;
-    about_window = gtk_window_new (GTK_WINDOW_DIALOG);
+
+    about_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
     gtk_object_set_data (GTK_OBJECT (about_window), "about_window", about_window);
     gtk_window_set_title (GTK_WINDOW (about_window), "About hexter");
     gtk_widget_realize(about_window);  /* window must be realized for create_about_pixmap() */
@@ -731,7 +767,6 @@ create_import_file_selection (const char *tag)
     free(title);
     gtk_object_set_data (GTK_OBJECT (import_file_selection), "import_file_selection", import_file_selection);
     gtk_container_set_border_width (GTK_CONTAINER (import_file_selection), 10);
-    GTK_WINDOW (import_file_selection)->type = GTK_WINDOW_DIALOG;
 
     ok_button = GTK_FILE_SELECTION (import_file_selection)->ok_button;
     gtk_object_set_data (GTK_OBJECT (import_file_selection), "ok_button", ok_button);
@@ -769,7 +804,7 @@ create_import_file_position_window (const char *tag)
     GtkWidget *position_cancel;
     GtkWidget *position_ok;
 
-    import_file_position_window = gtk_window_new (GTK_WINDOW_DIALOG);
+    import_file_position_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
     gtk_object_set_data (GTK_OBJECT (import_file_position_window),
                          "import_file_position_window", import_file_position_window);
     title = (char *)malloc(strlen(tag) + 17);
@@ -1199,7 +1234,6 @@ create_export_file_selection (const char *tag)
     free(title);
     gtk_object_set_data (GTK_OBJECT (export_file_selection), "export_file_selection", export_file_selection);
     gtk_container_set_border_width (GTK_CONTAINER (export_file_selection), 10);
-    GTK_WINDOW (export_file_selection)->type = GTK_WINDOW_DIALOG;  /* !FIX! Hmmm, FluidSynth-DSSI_gtk doesn't have this */
 
     ok_button = GTK_FILE_SELECTION (export_file_selection)->ok_button;
     gtk_object_set_data (GTK_OBJECT (export_file_selection), "ok_button", ok_button);
@@ -1237,7 +1271,7 @@ create_edit_save_position_window (const char *tag)
     GtkWidget *position_cancel;
     GtkWidget *position_ok;
  
-    edit_save_position_window = gtk_window_new (GTK_WINDOW_DIALOG);
+    edit_save_position_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
     gtk_object_set_data (GTK_OBJECT (edit_save_position_window),
                          "edit_save_position_window", edit_save_position_window);
     title = (char *)malloc(strlen(tag) + 20);

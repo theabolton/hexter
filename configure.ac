@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(hexter, 0.5.7, musound-at-jps-dot-net)
+AC_INIT(hexter, 0.5.8, musound-at-jps-dot-net)
 
 AC_CONFIG_SRCDIR(src/hexter.c)
 AM_INIT_AUTOMAKE
@@ -19,9 +19,43 @@ AC_PROG_LIBTOOL
 
 AC_C_BIGENDIAN
 
-dnl Require GTK+ 1.2.x
-AM_PATH_GTK(1.2.0, ,
-            AC_MSG_ERROR(Cannot find GTK: Is gtk-config in path?))
+AC_ARG_WITH(textui, AC_HELP_STRING([--with-textui], [build text-only user interface (disables GTK+ GUI)]),
+            [ if test $withval = "yes"; then with_textui=yes ;
+              else with_textui=no ; fi ], with_textui=no)
+AC_ARG_WITH(gtk2, AC_HELP_STRING([--with-gtk2], [use GTK+ 2.0 default=yes]),
+            [ if test $withval = "yes"; then try_gtk2=yes ;
+              else try_gtk2=no ; fi ], try_gtk2=yes)
+with_gtk=no
+if test "x${with_textui}" = 'xno'; then
+  dnl Check for GTK+
+  dnl First look for GTK+ 2.x, unless '--without-gtk2' was specified.
+  if test "x${try_gtk2}" = 'xyes'; then
+      AM_PATH_GTK_2_0(2.0.0, with_gtk='yes (version 2.0)', with_gtk=no)
+  fi
+  dnl  No GTK+ 2.x found, look for GTK+ 1.2 instead
+  if test "x${with_gtk}" = 'xno'; then
+      AM_PATH_GTK(1.2.0, with_gtk='yes (version 1.2)', AC_MSG_ERROR([error: no version of GTK+ found (maybe you want '--with-textui'?)]))
+  fi
+else
+  dnl Check for readline and (n)curses/termcap
+  AC_CHECK_HEADER([readline/readline.h], , AC_MSG_ERROR([error: no readline.h found]))
+  AC_CHECK_HEADER([readline/history.h], , AC_MSG_ERROR([error: no history.h found]))
+  READLINE_LIBS=''
+  AC_CHECK_LIB(readline, readline, READLINE_LIBS='-lreadline -lcurses',, [-lcurses])
+  if test "x$READLINE_LIBS" = 'x'; then
+    dnl cache doesn't consider OTHER-LIBRARIES:
+    unset ac_cv_lib_readline_readline
+    AC_CHECK_LIB(readline, readline, READLINE_LIBS='-lreadline -ltermcap',, [-ltermcap])
+  fi
+  if test "x$READLINE_LIBS" = 'x'; then
+    AC_MSG_ERROR([error: could not link readline libraries])
+  fi
+  AC_SUBST(READLINE_LIBS)
+  AC_DEFINE(BUILD_TEXTUI, 1, Define to 1 if building the text-only user interface)
+  with_gtk='no (building text-only user interface)'
+fi
+AM_CONDITIONAL(BUILD_TEXTUI, test "x${with_textui}" = 'xyes')
+echo "GTK support: $with_gtk"
 
 dnl Require DSSI and liblo
 PKG_CHECK_MODULES(MODULE, dssi >= 0.4 liblo >= 0.12)

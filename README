@@ -43,8 +43,8 @@ hexter requires the following:
         Sound Control protocol, available at
         http://plugin.org.uk/liblo/
     - pkgconfig with PKG_CONFIG_PATH set appropriately to pick up
-        DSSI and liblo
-    - GTK+ version 1.2.x.
+        DSSI and liblo.
+    - GTK+ version 1.2 or 2.x.
     - the LADSPA v1.x SDK.
     - the ALSA headers (DSSI plugins use ALSA structures, but not
         the actual drivers, so you don't necessarily need the
@@ -88,6 +88,9 @@ aren't particularly helpful, so try this instead:
     <prefix>/lib/dssi/hexter.so
     <prefix>/lib/dssi/hexter.la
     <prefix>/share/hexter/dx7_roms.dx7
+    <prefix>/share/hexter/fb01_roms_converted_12.dx7
+    <prefix>/share/hexter/fb01_roms_converted_34.dx7
+    <prefix>/share/hexter/fb01_roms_converted_5.dx7
     <prefix>/share/hexter/tx7_roms.dx7
 
 Feedback on your experiences building hexter is appreciated.
@@ -213,8 +216,8 @@ librarian from that.
 
 MIDI Controller Mapping
 =======================
-Currently, hexter responds to pitch bend and sustain pedal controls.
-Other controls will be implemented soon....
+Currently, hexter responds to MIDI volume, pitch bend, and sustain
+pedal controls.  Other controls will be implemented soon....
 
 Resources:
 ==========

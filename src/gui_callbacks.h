@@ -13,7 +13,7 @@
  * PURPOSE.  See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public
- * License along with this library; if not, write to the Free
+ * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307, USA.
  */
@@ -43,6 +43,7 @@ void on_about_dismiss(GtkWidget *widget, gpointer data);
 void on_patches_selection(GtkWidget *clist, gint row, gint column,
                           GdkEventButton *event, gpointer data);
 void on_tuning_change(GtkWidget *widget, gpointer data);
+void on_volume_change(GtkWidget *widget, gpointer data);
 void on_polyphony_change(GtkWidget *widget, gpointer data);
 void on_mono_mode_activate(GtkWidget *widget, gpointer data);
 void on_sysex_receipt(unsigned int length, unsigned char *data);

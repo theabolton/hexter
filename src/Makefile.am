@@ -1,6 +1,10 @@
 ## Process this file with automake to produce Makefile.in
 
+if BUILD_TEXTUI
+bin_PROGRAMS = hexter_text
+else
 bin_PROGRAMS = hexter_gtk
+endif
 
 bindir = $(libdir)/dssi/hexter
 
@@ -29,6 +33,21 @@ hexter_gtk_SOURCES = \
 hexter_gtk_CFLAGS = @GTK_CFLAGS@ $(AM_CFLAGS) @ALSA_CFLAGS@
 
 hexter_gtk_LDADD = @GTK_LIBS@ @ALSA_LIBS@
+
+hexter_text_SOURCES = \
+	../extra/textui_main.c \
+	dx7_voice_data.c \
+	dx7_voice_data.h \
+	dx7_voice_patches.c \
+	gui_data.c \
+	gui_data.h \
+	gui_main.h \
+	../extra/textui_callbacks.c \
+	../extra/textui_callbacks.h
+
+hexter_text_CFLAGS = $(AM_CFLAGS) @ALSA_CFLAGS@
+
+hexter_text_LDADD = @READLINE_LIBS@ @ALSA_LIBS@
 
 hexter_la_SOURCES = \
 	hexter.c \

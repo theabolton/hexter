@@ -1,3 +1,23 @@
+20041229 version 0.5.8
+
+* Added a 'Volume' control, and implemented MIDI CC 7 'Volume'
+    handling.
+
+* Compiles with GTK+ 2.x by default, or with GTK+ 1.2 if 2.x is not
+    found.  An optional text (readline) based UI can be built
+    instead by supplying configure with the '--with-textui' flag.
+
+* Implemented DSSI project directory handling.
+
+* Changed activate() to new behavior.
+
+* Fixed bug where changes to tuning control would only effect first
+    playing voice.
+
+* Made a number of error messages more informational.
+
+* Added converted FB-01 patches.
+
 20041101 0.5.7 first public release
 
 * Moved Test Note frame to be visible when both Patches and

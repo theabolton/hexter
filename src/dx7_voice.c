@@ -18,7 +18,7 @@
  * PURPOSE.  See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public
- * License along with this library; if not, write to the Free
+ * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307, USA.
  */
@@ -519,10 +519,10 @@ dx7_op_envelope_prepare(hexter_instance_t *instance, dx7_op_t *op,
      * was close to what my TX7 does, but tended to not bump the rate as much, so I changed it
      * to "* 6.5" which seems a little closer, but it's still not spot-on. */
     /* Things which affect this calculation: transpose, ? */
-    /* rate_bump = lrintf(floorf((float)op->rate_scaling * (float)(transposed_note - 21) / (126.0 - 21.0) * 127.0 / 128.0 * 6.0)); */
-    rate_bump = lrintf(floorf((float)op->rate_scaling * (float)(transposed_note - 21) / (126.0f - 21.0f) * 127.0f / 128.0f * 6.5f));
-    /* !FIX! just a hunch: try it again with "* 6.0" but also "(120.0 - 21.0)" instead of "(126.0 - 21.0)": */
-    /* rate_bump = lrintf(floorf((float)op->rate_scaling * (float)(transposed_note - 21) / (120.0 - 21.0) * 127.0 / 128.0 * 6.0)); */
+    /* rate_bump = lrintf((float)op->rate_scaling * (float)(transposed_note - 21) / (126.0f - 21.0f) * 127.0f / 128.0f * 6.0f - 0.5f); */
+    rate_bump = lrintf((float)op->rate_scaling * (float)(transposed_note - 21) / (126.0f - 21.0f) * 127.0f / 128.0f * 6.5f - 0.5f);
+    /* !FIX! just a hunch: try it again with "* 6.0f" but also "(120.0f - 21.0f)" instead of "(126.0f - 21.0f)": */
+    /* rate_bump = lrintf((float)op->rate_scaling * (float)(transposed_note - 21) / (120.0f - 21.0f) * 127.0f / 128.0f * 6.0f - 0.5f); */
 
     for (i=0;i<4;i++) {
 
@@ -705,13 +705,9 @@ dx7_voice_recalculate_frequency(hexter_instance_t *instance, dx7_voice_t *voice)
 {
     double freq;
 
-    /* !FIX! this maybe could be optimized */
-    /*       a lookup table of 8k values would give ~1.5 cent accuracy,
-     *       but then would interpolating that be faster than exp()? */
-    if (*instance->tuning != instance->last_tuning) {
-        instance->last_tuning = *instance->tuning;
-        instance->fixed_freq_multiplier = instance->last_tuning / 440.0;
-    }
+    voice->last_port_tuning = *instance->tuning;
+
+    instance->fixed_freq_multiplier = *instance->tuning / 440.0;
 
     freq = voice->pitch_eg.value + instance->pitch_bend;
 
@@ -719,7 +715,10 @@ dx7_voice_recalculate_frequency(hexter_instance_t *instance, dx7_voice_t *voice)
 
     freq += (double)(limit_note(voice->key + voice->transpose - 24));
 
-    freq = instance->last_tuning * exp((freq - 69.0) * M_LN2 / 12.0);
+    /* !FIX! this maybe could be optimized */
+    /*       a lookup table of 8k values would give ~1.5 cent accuracy,
+     *       but then would interpolating that be faster than exp()? */
+    freq = *instance->tuning * exp((freq - 69.0) * M_LN2 / 12.0);
 
     return freq;
 }
@@ -737,6 +736,39 @@ dx7_voice_recalculate_freq_and_inc(hexter_instance_t *instance,
     }
 }
 
+/* ===== output volume ===== */
+
+void
+dx7_voice_recalculate_volume(hexter_instance_t *instance, dx7_voice_t *voice)
+{
+    float f;
+    int i;
+
+    voice->last_port_volume = *instance->volume;
+    voice->last_cc_volume = instance->cc_volume;
+
+    /* This 41 OL volume cc mapping matches my TX7 fairly well, to within
+     * +/-0.8dB for most of the scale. (It even duplicates the "feature"
+     * of not going completely silent at zero....) */
+    f = (*instance->volume - 20.0f) * 1.328771f + 86.0f;
+    f += (float)instance->cc_volume * 41.0f / 16256.0f;
+    i = lrintf(f - 0.5f);
+    f -= (float)i;
+    voice->volume_target = FP_TO_FLOAT(dx7_voice_eg_ol_to_amp[i] +
+                                       f * (dx7_voice_eg_ol_to_amp[i + 1] -
+                                            dx7_voice_eg_ol_to_amp[i])) *
+                           0.110384f / dx7_voice_carrier_count[voice->algorithm];
+
+    if (voice->volume_value < 0.0f) { /* initial setup */
+        voice->volume_value = voice->volume_target;
+        voice->volume_count = 0;
+    } else {
+        voice->volume_count = (unsigned long)lrintf(instance->sample_rate / 20.0f);  /* 50ms ramp */
+        voice->volume_delta = (voice->volume_target - voice->volume_value) /
+                                  (float)voice->volume_count;
+    }
+}
+
 /* ===== whole patch related functions ===== */
 
 void
@@ -748,6 +780,9 @@ dx7_voice_calculate_runtime_parameters(hexter_instance_t *instance, dx7_voice_t*
     dx7_pitch_envelope_prepare(instance, voice);
 
     freq = dx7_voice_recalculate_frequency(instance, voice);
+
+    voice->volume_value = -1.0f;  /* force initial setup */
+    dx7_voice_recalculate_volume(instance, voice);
 
     for (i = 0; i < MAX_DX7_OPERATORS; i++) {
         voice->op[i].frequency = freq;
@@ -854,10 +889,8 @@ dx7_voice_update_pressure_mod(hexter_instance_t *instance, dx7_voice_t *voice)
         p = (float)cp / 127.0f;
         p += (1.0f - p) * ((float)kp / 127.0f);
     }
-    /* set the pressure modifier so it ranges between 1.0 (no pressure, no
-     * resonance boost) and 0.25 (full pressure, resonance boost 75% of the way
-     * to filter oscillation) */
-    // !FIX! voice->pressure = 1.0f - (p * 0.75f);
+    /* !FIX! apply pressure modulation: */
+    /* voice->pressure = f(p); */
 }
 
 /*

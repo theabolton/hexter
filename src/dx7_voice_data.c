@@ -16,14 +16,16 @@
  * PURPOSE.  See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public
- * License along with this library; if not, write to the Free
+ * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307, USA.
  */
 
 #include <stdlib.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "hexter_types.h"
 #include "dx7_voice.h"
@@ -205,6 +207,21 @@ dx7_bulk_dump_checksum(uint8_t *data, int length)
 }
 
 /*
+ * dssp_error_message
+ */
+char *
+dssp_error_message(const char *fmt, ...)
+{
+    va_list args;
+    char buffer[256];
+
+    va_start(args, fmt);
+    vsnprintf(buffer, 256, fmt, args);
+    va_end(args);
+    return strdup(buffer);
+}
+
+/*
  * dx7_patchbank_load
  */
 int
@@ -223,16 +240,14 @@ dx7_patchbank_load(const char *filename, dx7_patch_t *firstpatch,
      * the caller must free. */
 
     if ((fp = fopen(filename, "rb")) == NULL) {
-        // !FIX! FLUID_LOG(FLUID_ERR, "Couldn't open patch bank file '%s': %s", filename, strerror(errno));
-        if (errmsg) *errmsg = strdup("could not open file for reading");
+        if (errmsg) *errmsg = dssp_error_message("could not open file '%s' for reading: %s", filename, strerror(errno));
         return 0;
     }
 
     if (fseek(fp, 0, SEEK_END) ||
         (filelength = ftell(fp)) == -1 ||
         fseek(fp, 0, SEEK_SET)) {
-        // !FIX! FLUID_LOG(FLUID_ERR, "Couldn't get length of patch bank file: %s", strerror(errno));
-        if (errmsg) *errmsg = strdup("couldn't get length of patch file");
+        if (errmsg) *errmsg = dssp_error_message("couldn't get length of patch file: %s", strerror(errno));
         fclose(fp);
         return 0;
     }
@@ -253,8 +268,7 @@ dx7_patchbank_load(const char *filename, dx7_patch_t *firstpatch,
     }
 
     if (fread(raw_patch_data, 1, filelength, fp) != (size_t)filelength) {
-        // !FIX! FLUID_LOG(FLUID_ERR, "Short read on patch bank file: %s", strerror(errno));
-        if (errmsg) *errmsg = strdup("short read on patch file");
+        if (errmsg) *errmsg = dssp_error_message("short read on patch file: %s", strerror(errno));
         free(raw_patch_data);
         fclose(fp);
         return 0;

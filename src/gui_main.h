@@ -13,7 +13,7 @@
  * PURPOSE.  See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public
- * License along with this library; if not, write to the Free
+ * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307, USA.
  */
@@ -51,6 +51,7 @@ extern char *     osc_update_path;
 
 extern dx7_patch_t  *patches;
 extern int           patch_section_dirty[];
+extern char         *project_directory;
 
 extern int           current_program;
 

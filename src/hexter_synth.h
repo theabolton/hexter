@@ -18,7 +18,7 @@
  * PURPOSE.  See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public
- * License along with this library; if not, write to the Free
+ * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307, USA.
  */
@@ -48,6 +48,7 @@ struct _hexter_instance_t
     LADSPA_Data    *output;
     /* input */
     LADSPA_Data    *tuning;
+    LADSPA_Data    *volume;
 
     float           sample_rate;  
     float           nugget_rate;       /* nuggets per second */
@@ -72,10 +73,6 @@ struct _hexter_instance_t
     int             overlay_program;   /* program to which 'configure edit_buffer' patch applies, or -1 */
     uint8_t         overlay_patch_buffer[DX7_VOICE_SIZE_UNPACKED];  /* 'configure edit_buffer' patch */
 
-    /* tuning */
-    float           last_tuning;
-    double          fixed_freq_multiplier;
-
     /* current non-LADSPA-port-mapped controller values */
     unsigned char   key_pressure[128];
     unsigned char   cc[128];                  /* controller values */
@@ -83,11 +80,13 @@ struct _hexter_instance_t
     unsigned char   pitch_wheel_sensitivity;  /* in semitones */
     int             pitch_wheel;              /* range is -8192 - 8191 */
 
-    /* translated controller values */
+    /* translated port and controller values */
+    double          fixed_freq_multiplier;
+    unsigned long   cc_volume;                /* volume msb*128 + lsb, max 16256 */
     /* float        mod_wheel; */
     double          pitch_bend;               /* frequency shift, in semitones */
 
-    int32_t         dx7_eg_max_slew;   /* max op eg increment, in s15.16 units per frame */
+    int32_t         dx7_eg_max_slew;          /* max op eg increment, in s7.24 units per frame */
 };
 
 /*
@@ -149,6 +148,9 @@ void  hexter_synth_render_voices(unsigned long samples_done,
 
 /* these come right out of alsa/asoundef.h */
 #define MIDI_CTL_MSB_MODWHEEL           0x01    /**< Modulation */
+#define MIDI_CTL_MSB_MAIN_VOLUME        0x07    /**< Main volume */
+#define MIDI_CTL_LSB_MODWHEEL           0x21    /**< Modulation */
+#define MIDI_CTL_LSB_MAIN_VOLUME        0x27    /**< Main volume */
 #define MIDI_CTL_SUSTAIN                0x40    /**< Sustain pedal */
 #define MIDI_CTL_ALL_SOUNDS_OFF         0x78    /**< All sounds off */
 #define MIDI_CTL_RESET_CONTROLLERS      0x79    /**< Reset Controllers */

@@ -1,4 +1,4 @@
-/* hexter DSSI software synthesizer GUI
+/* hexter DSSI software synthesizer text-mode UI
  *
  * Copyright (C) 2004 Sean Bolton and others.
  *
@@ -31,16 +31,15 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <gtk/gtk.h>
+#include <readline/readline.h>
 #include <lo/lo.h>
 #include <dssi.h>
  
 #include "hexter_types.h"
 #include "hexter.h"
 #include "gui_main.h"
-#include "gui_callbacks.h"
-#include "gui_interface.h"
-#include "gui_midi.h"
+#include "textui_callbacks.h"
+/* -FIX- #include "gui_midi.h" */
 #include "gui_data.h"
 #include "dx7_voice_data.h"
 
@@ -63,7 +62,6 @@ char *     osc_update_path;
 
 dx7_patch_t  *patches = NULL;
 int           patch_section_dirty[4];
-char *        project_directory = NULL;
 
 int           current_program = 0;
 
@@ -71,6 +69,7 @@ int           edit_buffer_active = 0;
 edit_buffer_t edit_buffer;
 int           edit_receive_channel = 0;
 
+int done = 0;
 int host_requested_quit = 0;
 
 /* ==== OSC handling ==== */
@@ -83,16 +82,16 @@ osc_build_path(char *base_path, char *method)
 
     snprintf(buffer, 256, "%s%s", base_path, method);
     if (!(full_path = strdup(buffer))) {
-        GUIDB_MESSAGE(DB_OSC, ": out of memory!\n");
+        TUIDB_MESSAGE(DB_OSC, ": out of memory!\n");
         exit(1);
     }
-    return full_path;
+    return strdup(buffer);
 }
 
 static void
 osc_error(int num, const char *msg, const char *path)
 {
-    GUIDB_MESSAGE(DB_OSC, " error: liblo server error %d in path \"%s\": %s\n",
+    TUIDB_MESSAGE(DB_OSC, " error: liblo server error %d in path \"%s\": %s\n",
             num, (path ? path : "(null)"), msg);
 }
 
@@ -102,14 +101,12 @@ osc_debug_handler(const char *path, const char *types, lo_arg **argv,
 {
     int i;
 
-    GUIDB_MESSAGE(DB_OSC, " warning: unhandled OSC message to <%s>:\n", path);
+    TUIDB_MESSAGE(DB_OSC, " warning: unhandled OSC message to <%s>:\n", path);
 
     for (i = 0; i < argc; ++i) {
-        fprintf(stderr, "arg %d: type '%c': ", i, types[i]);
-fflush(stderr);
-        lo_arg_pp((lo_type)types[i], argv[i]);  /* -FIX- Ack, mixing stderr and stdout... */
-        fprintf(stdout, "\n");
-fflush(stdout);
+        printf("arg %d: type '%c': ", i, types[i]);
+        lo_arg_pp((lo_type)types[i], argv[i]);
+        printf("\n");
     }
 
     return 1;  /* try any other handlers */
@@ -121,22 +118,17 @@ osc_action_handler(const char *path, const char *types, lo_arg **argv,
 {
     if (!strcmp(user_data, "show")) {
 
-        /* GUIDB_MESSAGE(DB_OSC, " osc_action_handler: received 'show' message\n"); */
-        if (!GTK_WIDGET_MAPPED(main_window))
-            gtk_widget_show(main_window);
-        else
-            gdk_window_raise(main_window->window);
+        /* TUIDB_MESSAGE(DB_OSC, " osc_action_handler: received 'show' message\n"); */
 
     } else if (!strcmp(user_data, "hide")) {
 
-        /* GUIDB_MESSAGE(DB_OSC, " osc_action_handler: received 'hide' message\n"); */
-        gtk_widget_hide(main_window);
+        /* TUIDB_MESSAGE(DB_OSC, " osc_action_handler: received 'hide' message\n"); */
 
     } else if (!strcmp(user_data, "quit")) {
 
-        /* GUIDB_MESSAGE(DB_OSC, " osc_action_handler: received 'quit' message\n"); */
+        /* TUIDB_MESSAGE(DB_OSC, " osc_action_handler: received 'quit' message\n"); */
         host_requested_quit = 1;
-        gtk_main_quit();
+        done = 1;
 
     } else {
 
@@ -153,7 +145,7 @@ osc_configure_handler(const char *path, const char *types, lo_arg **argv,
     char *key, *value;
 
     if (argc < 2) {
-        GUIDB_MESSAGE(DB_OSC, " error: too few arguments to osc_configure_handler\n");
+        TUIDB_MESSAGE(DB_OSC, " error: too few arguments to osc_configure_handler\n");
         return 1;
     }
 
@@ -167,7 +159,7 @@ osc_configure_handler(const char *path, const char *types, lo_arg **argv,
 
     } else if (!strcmp(key, "edit_buffer")) {
 
-        update_edit_buffer(value);
+        /* -FIX- update_edit_buffer(value); */
 
     } else if (!strcmp(key, "monophonic")) {
 
@@ -188,9 +180,7 @@ osc_configure_handler(const char *path, const char *types, lo_arg **argv,
 #ifdef DSSI_PROJECT_DIRECTORY_KEY
     } else if (!strcmp(key, DSSI_PROJECT_DIRECTORY_KEY)) {
 
-        if (project_directory)
-            free(project_directory);
-        project_directory = strdup(value);
+        /* -FIX- implement project directory key */
 
 #endif
     } else {
@@ -210,16 +200,16 @@ osc_control_handler(const char *path, const char *types, lo_arg **argv,
     float value;
 
     if (argc < 2) {
-        GUIDB_MESSAGE(DB_OSC, " error: too few arguments to osc_control_handler\n");
+        TUIDB_MESSAGE(DB_OSC, " error: too few arguments to osc_control_handler\n");
         return 1;
     }
 
     port = argv[0]->i;
     value = argv[1]->f;
 
-    GUIDB_MESSAGE(DB_OSC, " osc_control_handler: control %d now %f\n", port, value);
+    TUIDB_MESSAGE(DB_OSC, " osc_control_handler: control %d now %f\n", port, value);
 
-    update_voice_widget(port, value);
+    /* -FIX- update_voice_widget(port, value); */
 
     return 0;
 }
@@ -231,7 +221,7 @@ osc_program_handler(const char *path, const char *types, lo_arg **argv,
     int bank, program;
 
     if (argc < 2) {
-        GUIDB_MESSAGE(DB_OSC, " error: too few arguments to osc_program_handler\n");
+        TUIDB_MESSAGE(DB_OSC, " error: too few arguments to osc_program_handler\n");
         return 1;
     }
 
@@ -239,33 +229,15 @@ osc_program_handler(const char *path, const char *types, lo_arg **argv,
     program = argv[1]->i;
 
     if (bank || program < 0 || program > 127) {
-        GUIDB_MESSAGE(DB_OSC, ": out-of-range program select (bank %d, program %d)\n", bank, program);
+        TUIDB_MESSAGE(DB_OSC, ": out-of-range program select (bank %d, program %d)\n", bank, program);
         return 0;
     }
 
-    GUIDB_MESSAGE(DB_OSC, " osc_program_handler: received program change, bank %d, program %d\n", bank, program);
+    TUIDB_MESSAGE(DB_OSC, " osc_program_handler: received program change, bank %d, program %d\n", bank, program);
 
     update_from_program_select(bank, program);
 
     return 0;
-}
-
-void
-osc_data_on_socket_callback(gpointer data, gint source,
-                            GdkInputCondition condition)
-{
-    lo_server server = (lo_server)data;
-
-    lo_server_recv_noblock(server, 0);
-}
-
-gint
-update_request_timeout_callback(gpointer data)
-{
-    /* send our update request */
-    lo_send(osc_host_address, osc_update_path, "s", osc_self_url);
-
-    return FALSE;  /* don't need to do this again */
 }
 
 /* ==== main ==== */
@@ -273,25 +245,22 @@ update_request_timeout_callback(gpointer data)
 int
 main(int argc, char *argv[])
 {
-    char *host, *port, *path, *tmp_url;
+    char *host, *port, *path, *tmp_url, *rl_prompt;
     lo_server osc_server;
-    gint osc_server_socket_tag;
-    gint update_request_timeout_tag;
+    int lo_fd, ret;
+    fd_set fds;
 
-    DSSP_DEBUG_INIT("hexter_gtk");
+    DSSP_DEBUG_INIT("hexter_text");
 
 #ifdef DSSP_DEBUG
-    GUIDB_MESSAGE(DB_MAIN, " starting (pid %d)...\n", getpid());
+    TUIDB_MESSAGE(DB_MAIN, " starting (pid %d)...\n", getpid());
 #else
-    fprintf(stderr, "hexter_gtk starting (pid %d)...\n", getpid());
+    printf("hexter_text starting (pid %d)...\n", getpid());
 #endif
     /* { int i; fprintf(stderr, "args:\n"); for(i=0; i<argc; i++) printf("%d: %s\n", i, argv[i]); } // debug */
 
-    gtk_set_locale();
-    gtk_init(&argc, &argv);
-
     if (argc != 5) {
-        fprintf(stderr, "usage: %s <osc url> <plugin dllname> <plugin label> <user-friendly id>\n", argv[0]);
+        printf("usage: %s <osc url> <plugin dllname> <plugin label> <user-friendly id>\n", argv[0]);
         exit(1);
     }
     user_friendly_id = argv[4];
@@ -325,42 +294,66 @@ main(int argc, char *argv[])
     osc_self_url = osc_build_path(tmp_url, (strlen(path) > 1 ? path + 1 : path));
     free(tmp_url);
 
-    /* set up GTK+ */
-    create_windows(user_friendly_id);
-
-    /* add OSC server socket to GTK+'s watched I/O */
-    if (lo_server_get_socket_fd(osc_server) < 0) {
-        fprintf(stderr, "hexter_gtk fatal: OSC transport does not support exposing socket fd\n");
+    /* get OSC server socket fd for main loop select() */
+    lo_fd = lo_server_get_socket_fd(osc_server);
+    if (lo_fd < 0) {
+        printf("hexter_text fatal: OSC transport does not support exposing socket fd\n");
         exit(1);
     }
-    osc_server_socket_tag = gdk_input_add(lo_server_get_socket_fd(osc_server),
-                                          GDK_INPUT_READ,
-                                          osc_data_on_socket_callback,
-                                          osc_server);
 
     /* set up patches */
     gui_data_patches_init();
-    rebuild_patches_clist();
 
-    /* schedule our update request */
-    update_request_timeout_tag = gtk_timeout_add(50,
-                                                 update_request_timeout_callback,
-                                                 NULL);
+    /* set up readline */
+    rl_prompt = (char *)malloc(strlen(user_friendly_id) + 12);  // error handling....
+    sprintf(rl_prompt, "hexter %s> ", user_friendly_id);
+    rl_callback_handler_install (rl_prompt, readline_callback);
+    rl_add_defun("test-note", test_note_callback, CTRL('t'));
 
-    /* let GTK+ take it from here */
-    gtk_main();
+    /* send our update request */
+    lo_send(osc_host_address, osc_update_path, "s", osc_self_url);
+
+    /* main loop */
+    do {
+
+        /* set up list of file descriptors to watch */
+        FD_ZERO(&fds);
+        FD_SET(0, &fds);  /* stdin */
+        FD_SET(lo_fd, &fds);
+        
+        ret = select(lo_fd + 1, &fds, NULL, NULL, NULL);
+
+        if (ret == -1) {
+
+            printf("hexter_text fatal: main loop select() error!\n");
+            done = 1;
+
+        } else if (ret > 0) {
+
+            if (FD_ISSET(0, &fds)) {
+
+                rl_callback_read_char();
+
+            }
+            if (FD_ISSET(lo_fd, &fds)) {
+
+                lo_server_recv_noblock(osc_server, 0);
+
+            }
+
+        }
+    } while (!done);
 
     /* clean up and exit */
-    GUIDB_MESSAGE(DB_MAIN, ": yep, we got to the cleanup!\n");
+    TUIDB_MESSAGE(DB_MAIN, ": yep, we got to the cleanup!\n");
 
     /* shut down sys-ex receive, if enabled */
-    if (sysex_enabled) {
-        sysex_stop();
-    }
+    /* -FIX- if (sysex_enabled) {
+     *           sysex_stop();
+     *       } */
 
-    /* GTK+ cleanup */
-    gtk_timeout_remove(update_request_timeout_tag);
-    gdk_input_remove(osc_server_socket_tag);
+    /* readline cleanup */
+    rl_callback_handler_remove();
 
     /* say bye-bye */
     if (!host_requested_quit) {
@@ -369,7 +362,6 @@ main(int argc, char *argv[])
 
     /* clean up patches */
     gui_data_patches_free();
-    if (project_directory) free(project_directory);
 
     /* clean up OSC support */
     lo_server_free(osc_server);

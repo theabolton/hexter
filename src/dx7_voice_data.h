@@ -13,7 +13,7 @@
  * PURPOSE.  See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public
- * License along with this library; if not, write to the Free
+ * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307, USA.
  */
@@ -27,6 +27,7 @@
 extern dx7_patch_t dx7_voice_init_voice;
 extern char        base64[];
 
+char *dssp_error_message(const char *fmt, ...);
 int  decode_7in6(const char *string, int expected_length, uint8_t *data);
 void dx7_voice_copy_name(char *name, dx7_patch_t *patch);
 void dx7_patch_unpack(dx7_patch_t *packed_patch, uint8_t number,

@@ -13,7 +13,7 @@
  * PURPOSE.  See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public
- * License along with this library; if not, write to the Free
+ * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307, USA.
  */
@@ -23,6 +23,7 @@
 #endif
 
 #include <stdlib.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -139,7 +140,7 @@ gui_data_save(char *filename, int type, int start, int end, char **message)
     GUIDB_MESSAGE(DB_IO, " gui_data_save: attempting to save '%s'\n", filename);
 
     if ((fh = fopen(filename, "wb")) == NULL) {
-        if (message) *message = strdup("could not open file for writing");
+        if (message) *message = dssp_error_message("could not open file '%s'for writing", filename);
         return 0;
     }
 
@@ -152,7 +153,7 @@ gui_data_save(char *filename, int type, int start, int end, char **message)
         buffer[5] = 0x00;
         if (fwrite(buffer, 1, 6, fh) != 6) {
             fclose(fh);
-            if (message) *message = strdup("error while writing sys-ex header");
+            if (message) *message = dssp_error_message("error while writing sys-ex header: %s", strerror(errno));
             return 0;
         }
     }
@@ -164,7 +165,7 @@ gui_data_save(char *filename, int type, int start, int end, char **message)
 
         if (fwrite(patch, 1, DX7_VOICE_SIZE_PACKED, fh) != DX7_VOICE_SIZE_PACKED) {
             fclose(fh);
-            if (message) *message = strdup("error while writing file");
+            if (message) *message = dssp_error_message("error while writing file: %s", strerror(errno));
             return 0;
         }
     }
@@ -174,7 +175,7 @@ gui_data_save(char *filename, int type, int start, int end, char **message)
         buffer[1] = 0xf7;
         if (fwrite(buffer, 1, 2, fh) != 2) {
             fclose(fh);
-            if (message) *message = strdup("error while writing sys-ex footer");
+            if (message) *message = dssp_error_message("error while writing sys-ex footer: %s", strerror(errno));
             return 0;
         }
     }
@@ -182,8 +183,7 @@ gui_data_save(char *filename, int type, int start, int end, char **message)
     fclose(fh);
 
     if (message) {
-        snprintf(buffer, 20, "wrote %d patches", end - start + 1);
-        *message = strdup(buffer);
+        *message = dssp_error_message("wrote %d patches", end - start + 1);
     }
     return 1;
 }
@@ -195,7 +195,6 @@ int
 gui_data_load(const char *filename, int position, char **message)
 {
     int tmpcount = 0;
-    char buffer[20];
 
     GUIDB_MESSAGE(DB_IO, " gui_data_load: attempting to load '%s'\n", filename);
 
@@ -209,8 +208,7 @@ gui_data_load(const char *filename, int position, char **message)
     gui_data_mark_dirty_patch_sections(position, position + tmpcount - 1);
 
     if (message) {
-        snprintf(buffer, 20, "loaded %d patches", tmpcount);
-        *message = strdup(buffer);
+        *message = dssp_error_message("loaded %d patches", tmpcount);
     }
 
     return tmpcount;

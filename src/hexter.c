@@ -18,7 +18,7 @@
  * PURPOSE.  See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public
- * License along with this library; if not, write to the Free
+ * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307, USA.
  */
@@ -30,7 +30,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdarg.h>
 #include <pthread.h>
 
 #include <ladspa.h>
@@ -131,15 +130,25 @@ hexter_instantiate(const LADSPA_Descriptor *descriptor,
     /* do any per-instance one-time initialization here */
     pthread_mutex_init(&instance->patches_mutex, NULL);
 
-    if (!(instance->patches = (dx7_patch_t *)malloc(128 * DX7_VOICE_SIZE_PACKED))) { /* !FIX! move this? */
+    if (!(instance->patches = (dx7_patch_t *)malloc(128 * DX7_VOICE_SIZE_PACKED))) {
         DEBUG_MESSAGE(-1, " hexter_instantiate: out of memory!\n");
         hexter_cleanup(instance);
         return NULL;
     }
 
-    instance->last_tuning = -1.0f;
     instance->sample_rate = (float)sample_rate;
     dx7_eg_init_constants(instance);  /* depends on sample rate */
+
+    instance->polyphony = HEXTER_DEFAULT_POLYPHONY;
+    instance->monophonic = DSSP_MONO_MODE_OFF;
+    instance->max_voices = instance->polyphony;
+    instance->current_voices = 0;
+    instance->pending_program_change = -1;
+    instance->current_program = 0;
+    instance->overlay_program = -1;
+    hexter_data_patches_init(instance->patches);
+    hexter_instance_init_controls(instance);
+    hexter_instance_select_program(instance, 0, 0);
 
     return (LADSPA_Handle)instance;
 }
@@ -157,6 +166,7 @@ hexter_connect_port(LADSPA_Handle handle, unsigned long port, LADSPA_Data *data)
     switch (port) {
       case HEXTER_PORT_OUTPUT:  instance->output = data;  break;
       case HEXTER_PORT_TUNING:  instance->tuning = data;  break;
+      case HEXTER_PORT_VOLUME:  instance->volume = data;  break;
       default:
         break;
     }
@@ -172,17 +182,8 @@ hexter_activate(LADSPA_Handle handle)
 {
     hexter_instance_t *instance = (hexter_instance_t *)handle;
 
-    *(instance->tuning) = 440.0f; // !FIX! is this kosher? is it needed?
-    instance->polyphony = HEXTER_DEFAULT_POLYPHONY;
-    instance->monophonic = DSSP_MONO_MODE_OFF;
-    instance->max_voices = instance->polyphony;
+    hexter_instance_all_voices_off(instance);  /* stop all sounds immediately */
     instance->current_voices = 0;
-    instance->pending_program_change = -1;
-    instance->current_program = 0;
-    instance->overlay_program = -1;
-    hexter_data_patches_init(instance->patches);
-    hexter_instance_init_controls(instance);
-    hexter_instance_select_program(instance, 0, 0);
 }
 
 /*
@@ -252,21 +253,6 @@ hexter_cleanup(LADSPA_Handle handle)
 /* ---- DSSI interface ---- */
 
 /*
- * dssi_configure_message
- */
-char *
-dssi_configure_message(const char *fmt, ...)
-{
-    va_list args;
-    char buffer[256];
-
-    va_start(args, fmt);
-    vsnprintf(buffer, 256, fmt, args);
-    va_end(args);
-    return strdup(buffer);
-}
-
-/*
  * hexter_configure
  *
  * implements DSSI (*configure)()
@@ -309,9 +295,7 @@ hexter_configure(LADSPA_Handle handle, const char *key, const char *value)
 
 #endif
     }
-
-    return dssi_configure_message("error: unrecognized configure key '%s'",
-				  key);
+    return strdup("error: unrecognized configure key");
 }
 
 /*
@@ -619,7 +603,7 @@ void _init()
         port_names[HEXTER_PORT_OUTPUT] = "Output";
         port_range_hints[HEXTER_PORT_OUTPUT].HintDescriptor = 0;
 
-        /* Parameters for Volume */
+        /* Parameters for Tuning */
         port_descriptors[HEXTER_PORT_TUNING] = LADSPA_PORT_INPUT | LADSPA_PORT_CONTROL;
         port_names[HEXTER_PORT_TUNING] = "Tuning";
         port_range_hints[HEXTER_PORT_TUNING].HintDescriptor =
@@ -627,6 +611,15 @@ void _init()
                         LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE;
         port_range_hints[HEXTER_PORT_TUNING].LowerBound = 415.3f;
         port_range_hints[HEXTER_PORT_TUNING].UpperBound = 466.2f;
+
+        /* Parameters for Volume */
+        port_descriptors[HEXTER_PORT_VOLUME] = LADSPA_PORT_INPUT | LADSPA_PORT_CONTROL;
+        port_names[HEXTER_PORT_VOLUME] = "Volume";
+        port_range_hints[HEXTER_PORT_VOLUME].HintDescriptor =
+                        LADSPA_HINT_DEFAULT_0 |
+                        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE;
+        port_range_hints[HEXTER_PORT_VOLUME].LowerBound = -70.0f;
+        port_range_hints[HEXTER_PORT_VOLUME].UpperBound =  20.0f;
 
         hexter_LADSPA_descriptor->instantiate = hexter_instantiate;
         hexter_LADSPA_descriptor->connect_port = hexter_connect_port;

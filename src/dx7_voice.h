@@ -18,7 +18,7 @@
  * PURPOSE.  See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public
- * License along with this library; if not, write to the Free
+ * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307, USA.
  */
@@ -150,6 +150,7 @@ struct _dx7_voice_t
 
     dx7_pitch_eg_t pitch_eg;
     double         last_pitch;
+    float          last_port_tuning;
 
     uint8_t        algorithm;
     int32_t        feedback;
@@ -157,6 +158,13 @@ struct _dx7_voice_t
     uint8_t        osc_key_sync;
 
     int            transpose;
+
+    float          last_port_volume;
+    unsigned long  last_cc_volume;
+    float          volume_value;
+    float          volume_target;
+    float          volume_delta;
+    unsigned long  volume_count;
 };
 
 #define _PLAYING(voice)    ((voice)->status != DX7_VOICE_OFF)
@@ -168,6 +176,7 @@ struct _dx7_voice_t
 extern int32_t dx7_voice_sin_table[SINE_SIZE + 1];
 
 extern uint8_t dx7_voice_carriers[32];
+extern float   dx7_voice_carrier_count[32];
 
 extern float   dx7_voice_eg_rate_rise_duration[128];
 extern float   dx7_voice_eg_rate_decay_duration[128];
@@ -208,6 +217,8 @@ double  dx7_voice_recalculate_frequency(hexter_instance_t *instance,
                                         dx7_voice_t *voice);
 void    dx7_voice_recalculate_freq_and_inc(hexter_instance_t *instance,
                                            dx7_voice_t *voice);
+void    dx7_voice_recalculate_volume(hexter_instance_t *instance,
+                                     dx7_voice_t *voice);
 void    dx7_voice_calculate_runtime_parameters(hexter_instance_t *instance,
                                                dx7_voice_t *voice);
 void    dx7_voice_setup_note(hexter_instance_t *instance, dx7_voice_t *voice);

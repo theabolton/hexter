@@ -13,7 +13,7 @@
  * PURPOSE.  See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public
- * License along with this library; if not, write to the Free
+ * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307, USA.
  */
@@ -57,16 +57,35 @@ static int export_file_start;
 static int export_file_end;
 
 static gchar *file_selection_last_filename = NULL;
+extern char  *project_directory;
+
+void
+file_selection_set_path(GtkWidget *file_selection)
+{
+    if (file_selection_last_filename) {
+        gtk_file_selection_set_filename(GTK_FILE_SELECTION(file_selection),
+                                        file_selection_last_filename);
+    } else if (project_directory && strlen(project_directory)) {
+        if (project_directory[strlen(project_directory) - 1] != '/') {
+            char buffer[PATH_MAX];
+            snprintf(buffer, PATH_MAX, "%s/", project_directory);
+            gtk_file_selection_set_filename(GTK_FILE_SELECTION(file_selection),
+                                            buffer);
+        } else {
+            gtk_file_selection_set_filename(GTK_FILE_SELECTION(file_selection),
+                                            project_directory);
+        }
+    }
+}
 
 void
 on_menu_import_activate               (GtkMenuItem     *menuitem,
                                        gpointer         user_data)
 {
-    gtk_widget_hide(export_file_selection);
     gtk_widget_hide(import_file_position_window);
-    if (file_selection_last_filename)
-        gtk_file_selection_set_filename(GTK_FILE_SELECTION(import_file_selection),
-                                        file_selection_last_filename);
+    gtk_widget_hide(export_file_type_window);
+    gtk_widget_hide(export_file_selection);
+    file_selection_set_path(import_file_selection);
     gtk_widget_show(import_file_selection);
 }
 
@@ -76,6 +95,7 @@ on_menu_export_activate                (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
 {
     gtk_widget_hide(import_file_selection);
+    gtk_widget_hide(import_file_position_window);
     gtk_widget_hide(export_file_selection);
     gtk_signal_emit_by_name (GTK_OBJECT (export_file_start_spin_adj), "value_changed");
     gtk_signal_emit_by_name (GTK_OBJECT (export_file_end_spin_adj), "value_changed");
@@ -119,8 +139,8 @@ void
 on_import_file_ok( GtkWidget *widget, gpointer data )
 {
     gtk_widget_hide(import_file_selection);
-    file_selection_last_filename = gtk_file_selection_get_filename(
-                                       GTK_FILE_SELECTION(import_file_selection));
+    file_selection_last_filename = (gchar *)gtk_file_selection_get_filename(
+                                                GTK_FILE_SELECTION(import_file_selection));
 
     GUIDB_MESSAGE(DB_GUI, " on_import_file_ok: file '%s' selected\n",
                     file_selection_last_filename);
@@ -272,9 +292,7 @@ on_export_file_type_ok( GtkWidget *widget, gpointer data )
                   export_file_type == 0 ? "sys-ex" : "raw", export_file_start, export_file_end);
 
     gtk_widget_hide(export_file_type_window);
-    if (file_selection_last_filename)
-        gtk_file_selection_set_filename(GTK_FILE_SELECTION(export_file_selection),
-                                        file_selection_last_filename);
+    file_selection_set_path(export_file_selection);
     gtk_widget_show(export_file_selection);
 }
 
@@ -291,8 +309,8 @@ on_export_file_ok( GtkWidget *widget, gpointer data )
     char *message;
 
     gtk_widget_hide(export_file_selection);
-    file_selection_last_filename = gtk_file_selection_get_filename(
-                                       GTK_FILE_SELECTION(export_file_selection));
+    file_selection_last_filename = (gchar *)gtk_file_selection_get_filename(
+                                                GTK_FILE_SELECTION(export_file_selection));
 
     GUIDB_MESSAGE(DB_GUI, " on_export_file_ok: file '%s' selected\n",
                     file_selection_last_filename);
@@ -369,6 +387,21 @@ on_tuning_change( GtkWidget *widget, gpointer data )
     GUIDB_MESSAGE(DB_GUI, " on_tuning_change: tuning set to %10.6f\n", value);
 
     lo_send(osc_host_address, osc_control_path, "if", HEXTER_PORT_TUNING, value);
+}
+
+void
+on_volume_change( GtkWidget *widget, gpointer data )
+{
+    float value = GTK_ADJUSTMENT(widget)->value;
+
+    if (internal_gui_update_only) {
+        /* GUIDB_MESSAGE(DB_GUI, " on_volume_change: skipping further action\n"); */
+        return;
+    }
+
+    GUIDB_MESSAGE(DB_GUI, " on_volume_change: volume set to %10.6f\n", value);
+
+    lo_send(osc_host_address, osc_control_path, "if", HEXTER_PORT_VOLUME, value);
 }
 
 void
@@ -517,8 +550,10 @@ on_sysex_save_button_press(GtkWidget *widget, gpointer data)
     /* (GTK_ADJUSTMENT(edit_save_position_spin_adj))->value = 
      *         (patch_count == 128 ?   0.0f : (float)patch_count);
      * (GTK_ADJUSTMENT(edit_save_position_spin_adj))->upper =
-     *         (patch_count == 128 ? 127.0f : (float)patch_count);
-     * gtk_signal_emit_by_name (GTK_OBJECT (edit_save_position_spin_adj), "value_changed"); */
+     *         (patch_count == 128 ? 127.0f : (float)patch_count); */
+
+    /* update patch name */
+    gtk_signal_emit_by_name (GTK_OBJECT (edit_save_position_spin_adj), "value_changed");
 
     gtk_widget_show(edit_save_position_window);
 }
@@ -614,23 +649,40 @@ on_notice_dismiss( GtkWidget *widget, gpointer data )
 void
 update_voice_widget(int port, float value)
 {
-    if (port != HEXTER_PORT_TUNING)
-        return;
+    if (port == HEXTER_PORT_TUNING) {
 
-    if (value < 415.3f) {
-        value = 415.3f;
-    } else if (value > 466.2f) {
-        value = 466.2f;
+        if (value < 415.3f) {
+            value = 415.3f;
+        } else if (value > 466.2f) {
+            value = 466.2f;
+        }
+
+        /* GUIDB_MESSAGE(DB_OSC, " update_voice_widget: change of 'Tuning' to %f\n", value); */
+
+        internal_gui_update_only = 1;
+
+        GTK_ADJUSTMENT(tuning_adj)->value = value;
+        gtk_signal_emit_by_name (GTK_OBJECT (tuning_adj), "value_changed");  /* causes call to on_voice_slider_change callback */
+
+        internal_gui_update_only = 0;
+
+    } else if (port == HEXTER_PORT_VOLUME) {
+
+        if (value < -70.0f) {
+            value = -70.0f;
+        } else if (value > 20.0f) {
+            value = 20.0f;
+        }
+
+        /* GUIDB_MESSAGE(DB_OSC, " update_voice_widget: change of 'Volume' to %f\n", value); */
+
+        internal_gui_update_only = 1;
+
+        GTK_ADJUSTMENT(volume_adj)->value = value;
+        gtk_signal_emit_by_name (GTK_OBJECT (volume_adj), "value_changed");  /* causes call to on_voice_slider_change callback */
+
+        internal_gui_update_only = 0;
     }
-
-    /* GUIDB_MESSAGE(DB_OSC, " update_voice_widget: change of 'Tuning' to %f\n", value); */
-
-    internal_gui_update_only = 1;
-
-    GTK_ADJUSTMENT(tuning_adj)->value = value;
-    gtk_signal_emit_by_name (GTK_OBJECT (tuning_adj), "value_changed");  /* causes call to on_voice_slider_change callback */
-
-    internal_gui_update_only = 0;
 }
 
 void
@@ -803,6 +855,10 @@ rebuild_patches_clist(void)
         dx7_voice_copy_name(name, &patches[i]);
         gtk_clist_append(GTK_CLIST(patches_clist), data);
     }
+#if GTK_CHECK_VERSION(2, 0, 0)
+    /* kick GTK+ 2.4.x in the pants.... */
+    gtk_signal_emit_by_name (GTK_OBJECT (patches_clist), "check-resize");
+#endif    
     gtk_clist_thaw(GTK_CLIST(patches_clist));
 }
 

@@ -18,7 +18,7 @@
  * PURPOSE.  See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public
- * License along with this library; if not, write to the Free
+ * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307, USA.
  */
@@ -222,6 +222,24 @@ dx7_voice_check_for_dead(dx7_voice_t *voice)
     return 1;
 }
 
+static inline int
+float_punned_equality(float a, float b)
+{
+    union { float f; unsigned long l; } ua, ub;
+    ua.f = a;
+    ub.f = b;
+    return ua.l == ub.l;
+}
+
+static inline int
+double_punned_equality(double a, double b)
+{
+    union { double d; unsigned long l[2]; } ua, ub;
+    ua.d = a;
+    ub.d = b;
+    return ua.l[0] == ub.l[0] && ua.l[1] == ub.l[1];
+}
+
 /*
  * dx7_voice_render
  *
@@ -235,8 +253,11 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
     unsigned long sample;
     int32_t       i;
     int32_t       output;
-    LADSPA_Data   foutput;
 
+    if (!float_punned_equality(voice->last_port_volume, *instance->volume) ||
+        voice->last_cc_volume != instance->cc_volume)
+        dx7_voice_recalculate_volume(instance, voice);
+    
     for (sample = 0; sample < sample_count; sample++) {
 
         switch (voice->algorithm) {
@@ -259,7 +280,8 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                                                voice->op[OP_1].phase +
                                                dx7_op_calculate_modulator(voice->op[OP_2].eg.value,
                                                                           voice->op[OP_2].phase))
-                     ) / 2;  /* -FIX- optimize this division into gain adjustment multiplication at the end */
+                     );
+            /* voice->volume_value contains a scaling factor for the number of carriers */
 
             break;
 
@@ -274,7 +296,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
             output = (
                       car(OP_3, mod(OP_4, mod(OP_5, mod(OP_6, 0)))) +
                       car(OP_1, mod_sfb(OP_2, voice->feedback))
-                     ) / 2;
+                     );
 
             break;
 
@@ -283,7 +305,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
             output = (
                       car(OP_4, mod(OP_5, mod_sfb(OP_6, voice->feedback))) +
                       car(OP_1, mod(OP_2, mod(OP_3, 0)))
-                     ) / 2;
+                     );
 
             break;
 
@@ -292,7 +314,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
             output = (
                       car_sfb(OP_4, mod(OP_5, mod(OP_6, voice->feedback))) +
                       car(OP_1, mod(OP_2, mod(OP_3, 0)))
-                     ) / 2;
+                     );
 
             break;
 
@@ -302,7 +324,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_5, mod_sfb(OP_6, voice->feedback)) +
                       car(OP_3, mod(OP_4, 0)) +
                       car(OP_1, mod(OP_2, 0))
-                     ) / 3;
+                     );
 
             break;
 
@@ -312,7 +334,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car_sfb(OP_5, mod(OP_6, voice->feedback)) +
                       car(OP_3, mod(OP_4, 0)) +
                       car(OP_1, mod(OP_2, 0))
-                     ) / 3;
+                     );
 
             break;
 
@@ -322,7 +344,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_3, mod(OP_5, mod_sfb(OP_6, voice->feedback)) +
                                 mod(OP_4, 0)) +
                       car(OP_1, mod(OP_2, 0))
-                     ) / 2;
+                     );
 
             break;
 
@@ -332,7 +354,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_3, mod(OP_5, mod(OP_6, 0)) +
                                 mod_sfb(OP_4, voice->feedback)) +
                       car(OP_1, mod(OP_2, 0))
-                     ) / 2;
+                     );
 
             break;
 
@@ -342,7 +364,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_3, mod(OP_5, mod(OP_6, 0)) +
                                 mod(OP_4, 0)) +
                       car(OP_1, mod_sfb(OP_2, voice->feedback))
-                     ) / 2;
+                     );
 
             break;
 
@@ -352,7 +374,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_4, mod(OP_6, 0) +
                                 mod(OP_5, 0)) +
                       car(OP_1, mod(OP_2, mod_sfb(OP_3, voice->feedback)))
-                     ) / 2;
+                     );
 
             break;
 
@@ -362,7 +384,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_4, mod_sfb(OP_6, voice->feedback) +
                                 mod(OP_5, 0)) +
                       car(OP_1, mod(OP_2, mod(OP_3, 0)))
-                     ) / 2;
+                     );
 
             break;
 
@@ -373,7 +395,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                                 mod(OP_5, 0) +
                                 mod(OP_4, 0)) +
                       car(OP_1, mod_sfb(OP_2, voice->feedback))
-                     ) / 2;
+                     );
 
             break;
 
@@ -384,7 +406,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                                 mod(OP_5, 0) +
                                 mod(OP_4, 0)) +
                       car(OP_1, mod(OP_2, 0))
-                     ) / 2;
+                     );
 
             break;
 
@@ -394,7 +416,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_3, mod(OP_4, mod_sfb(OP_6, voice->feedback) +
                                           mod(OP_5, 0))) +
                       car(OP_1, mod(OP_2, 0))
-                     ) / 2;
+                     );
 
             break;
 
@@ -404,7 +426,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_3, mod(OP_4, mod(OP_6, 0) +
                                           mod(OP_5, 0))) +
                       car(OP_1, mod_sfb(OP_2, voice->feedback))
-                     ) / 2;
+                     );
 
             break;
 
@@ -440,7 +462,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_5, i) +
                       car(OP_4, i) +
                       car(OP_1, mod(OP_2, mod(OP_3, 0)))
-                     ) / 3;
+                     );
 
             break;
 
@@ -453,7 +475,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                                 mod(OP_5, 0)) +
                       car(OP_2, i) +
                       car(OP_1, i)
-                     ) / 3;
+                     );
 
             break;
 
@@ -468,7 +490,6 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
 
             output += car(OP_2, i) +
                       car(OP_1, i);
-            output /= 4;
 
             break;
 
@@ -481,7 +502,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_4, i) +
                       car(OP_3, i) +
                       car(OP_1, mod(OP_2, 0))
-                     ) / 4;
+                     );
 
             break;
 
@@ -494,7 +515,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_4, i) +
                       car(OP_2, mod(OP_3, 0)) +
                       car(OP_1, 0)
-                     ) / 4;
+                     );
 
             break;
 
@@ -508,7 +529,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_3, i) +
                       car(OP_2, 0) +
                       car(OP_1, 0)
-                     ) / 5;
+                     );
 
             break;
 
@@ -522,7 +543,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_3, 0) +
                       car(OP_2, 0) +
                       car(OP_1, 0)
-                     ) / 5;
+                     );
 
             break;
 
@@ -533,7 +554,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                                 mod(OP_5, 0)) +
                       car(OP_2, mod(OP_3, 0)) +
                       car(OP_1, 0)
-                     ) / 3;
+                     );
 
             break;
 
@@ -544,7 +565,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                                 mod(OP_5, 0)) +
                       car(OP_2, mod_sfb(OP_3, voice->feedback)) +
                       car(OP_1, 0)
-                     ) / 3;
+                     );
 
             break;
 
@@ -554,7 +575,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_6, 0) +
                       car(OP_3, mod(OP_4, mod_sfb(OP_5, voice->feedback))) +
                       car(OP_1, mod(OP_2, 0))
-                     ) / 3;
+                     );
 
             break;
 
@@ -565,7 +586,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_3, mod(OP_4, 0)) +
                       car(OP_2, 0) +
                       car(OP_1, 0)
-                     ) / 4;
+                     );
 
             break;
 
@@ -576,7 +597,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_3, mod(OP_4, mod_sfb(OP_5, voice->feedback))) +
                       car(OP_2, 0) +
                       car(OP_1, 0)
-                     ) / 4;
+                     );
 
             break;
 
@@ -588,7 +609,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_3, 0) +
                       car(OP_2, 0) +
                       car(OP_1, 0)
-                     ) / 5;
+                     );
 
             break;
 
@@ -602,7 +623,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                       car(OP_3, 0) +
                       car(OP_2, 0) +
                       car(OP_1, 0)
-                     ) / 6;
+                     );
 
             break;
 
@@ -613,10 +634,7 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
         }
 
         /* mix voice output into output buffer */
-        foutput = FP_TO_FLOAT(output);
-        // !FIX! scale by volume and whatever:
-        // out[sample] += voice->volume * foutput;
-        out[sample] += foutput * 0.125f;
+        out[sample] += FP_TO_FLOAT(output) * voice->volume_value;
 
         /* update runtime parameters for next sample */
         voice->op[OP_6].phase += voice->op[OP_6].phase_increment;
@@ -632,6 +650,11 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
         dx7_op_eg_process(instance, &voice->op[OP_3].eg);
         dx7_op_eg_process(instance, &voice->op[OP_2].eg);
         dx7_op_eg_process(instance, &voice->op[OP_1].eg);
+
+        if (voice->volume_count) {
+            voice->volume_value += voice->volume_delta;
+            voice->volume_count--;
+        }
     }
 
     if (do_control_update) {
@@ -647,8 +670,9 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
         dx7_pitch_eg_process(instance, &voice->pitch_eg);
 
         /* update phase increments if pitch or tuning changed */
-        if (voice->last_pitch != voice->pitch_eg.value + instance->pitch_bend ||
-            instance->last_tuning != *instance->tuning) {
+        if (!double_punned_equality(voice->last_pitch,
+                                    voice->pitch_eg.value + instance->pitch_bend) ||
+            !float_punned_equality(voice->last_port_tuning, *instance->tuning)) {
 
             dx7_voice_recalculate_freq_and_inc(instance, voice);
         }
@@ -660,6 +684,10 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
         dx7_op_eg_adjust(&voice->op[OP_3].eg);
         dx7_op_eg_adjust(&voice->op[OP_2].eg);
         dx7_op_eg_adjust(&voice->op[OP_1].eg);
+
+        /* output volume */
+        if (!voice->volume_count)
+            voice->volume_value = voice->volume_target;
     }
 }
 
