@@ -163,6 +163,11 @@ controls for configuring hexter:
 - tuning: sets the tuning of this instance of the plugin,
     as Hz for A-above-middle-C.
 
+- volume: adjusts the output volume for this instance, from -70dB to
+    +20dB relative to a nominal level reference level (-18.1dB per
+    voice, which permits approximately 8 voice polyphony within -1.0
+    to +1.0 float.)
+
 - polyphony (instance): Sets the maximum polyphony for this instance
     of the plugin.  If you attempt to play more notes than this
     setting, already-playing notes will be killed so that newer
