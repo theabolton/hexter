@@ -1,0 +1,33 @@
+hexter To-Do list, in no particular order:
+==========================================
+* implement some sort of volume scaling: I say a synth outputting
+    floating point ought to have a nominal maximum output of 0dBFS
+    _per voice_, but anything outputting to fixed point needs to
+    scale that back to 0dBFS or less _total_.  Right now, I think
+    hexter does -18dBFS _per voice_.
+
+* Clean up all "!FIX!"es (and "-FIX-"es).
+
+* Optionally sort patch list alphabetically (Steve Harris).
+
+* Switch to GTK+ v2.x? (Chris Cannam).
+
+* implement amplitude modulation, LFOs, and mod source routing (mod
+    wheel, breath controller, foot pedal).
+
+* optimize so if a voice just being set up still has all the
+    patch data for the current edit buffer, we skip loading it.
+
+* Figure out the feedback scaling "fudge factor".  The current 0.18
+    is close, but not right on.
+
+* Finish pitch envelope time calculation stuff.
+
+* Add a high-pass filter to the output, to block very low frequency
+    output like the DX7 does.
+
+* Implement de-clicking of stolen voices.
+
+* Implement any remaining DSSI bells and whistles (project
+    directory, ?).
+

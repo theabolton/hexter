@@ -1,0 +1,66 @@
+                                hexter
+                                ======
+               A Yamaha DX7 modeling software synthesizer
+                for the Disposable Soft Synth Interface
+
+hexter is written and maintained by Sean Bolton.  It is copyright
+(c) 2004 under the GNU General Public License, version 2 or later.
+Bug reports, kudos, and job offers (seriously!) should go directly
+to Sean at the email address:
+
+    musound /at/ jps /dot/ net
+
+hexter includes code taken from the following sources:
+
+    The sound generation code descends most directly from Juan
+    Linietsky's rx-saturno, copyright (c) 2002 under the GNU General
+    Public License version 2.
+
+    Major portions of the event handling code are derived from
+    Fluidsynth, copyright (c) 2003 Peter Hanappe and others, under
+    the GNU General Public License version 2.
+
+    Portions of the DSSI interface and OSC handling code come from
+    Chris Cannam and Steve Harris's public domain DSSI example code.
+
+    The ALSA MIDI input is based on specimen, copyright (c) 2004
+    Pete Bessman under the GNU General Public License version 2.
+
+hexter is also very much the result of an ongoing cumulative effort
+by a large number of DX7 and synthesis enthusiasts, including:
+
+    - John Chowning, who invented FM synthesis, and told us about it
+        (among other places) in "The Synthesis of Complex Audio
+        Spectra by Means of Frequency Modulation", JAES 21:526-534,
+        1973.
+
+    - Yamaha, who made my beloved TX7s and KX88.
+
+    - Chowning and Dave Bristow published "FM Theory and
+        Applications", which I never obtained, but is cited by many
+        of the other sources I used, such as:
+
+    - T. Yala Abdullah's website explaining OL-to-TL conversions and
+        modulation indices.
+
+    - Russell Pinkston, Jeff Harrington, Doug Walter, and Sylvain
+        Marchand, creators of the dx72csnd DX7-to-csound patch
+        converter and orchestra files, upon which much of subsequent
+        emulation efforts has been based.
+
+    - Godric Wilkie, who supplied pitch envelope timings
+        (http://www.gozen.demon.co.uk/godric/synth/yam.html).
+
+    - Bo Tomlyn and his "Programming the DX7" article.
+
+    - Howard Massey and his "Tricks and Traps of the DX7" article.
+
+    - Members of the Linux Audio Developers list, for much wisdom
+        regarding digital audio and synthesis.
+
+Bug fixes have been contributed by:
+
+    [none yet]
+
+Thanks everybody!  Ain't open source great?
+

@@ -1,0 +1,13 @@
+20041101 0.5.7 first public release
+
+* Moved Test Note frame to be visible when both Patches and
+    Configuration tabs are selected.
+
+* Changed  tuning slider to a spinbutton for greater accuracy.
+
+* Made a slightly better default patch set.
+
+20041029 0.5.7-alpha -- initial alpha release
+
+* "don't put that in your mouth, you don't know where it's been!"
+
