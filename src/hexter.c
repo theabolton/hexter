@@ -309,7 +309,9 @@ hexter_configure(LADSPA_Handle handle, const char *key, const char *value)
 
 #endif
     }
-    return strdup("error: unrecognized configure key");
+
+    return dssi_configure_message("error: unrecognized configure key '%s'",
+				  key);
 }
 
 /*
