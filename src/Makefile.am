@@ -65,5 +65,9 @@ hexter_la_SOURCES = \
 
 hexter_la_LIBADD = -lm
 
+if DARWIN
+hexter_la_LDFLAGS = -module -avoid-version
+else
 hexter_la_LDFLAGS = -module -avoid-version -Wc,-nostartfiles
+endif
 

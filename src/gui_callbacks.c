@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004 Sean Bolton and others.
+ * Copyright (C) 2004-2005 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -442,6 +442,7 @@ on_mono_mode_activate(GtkWidget *widget, gpointer data)
     lo_send(osc_host_address, osc_configure_path, "ss", "monophonic", mode);
 }
 
+#ifdef MIDI_ALSA
 void
 on_sysex_receipt(unsigned int length, unsigned char* data)
 {
@@ -490,10 +491,12 @@ on_sysex_enable_toggled( GtkWidget *widget, gpointer data )
             gtk_widget_set_sensitive (sysex_channel_label, TRUE);
             gtk_widget_set_sensitive (sysex_channel_spin, TRUE);
 
+#ifdef MIDI_ALSA
             if (!edit_buffer_active) {
                 snprintf(buf, 32, " (listening at %d:%d)", sysex_seq_client_id, sysex_seq_port_id);
                 gtk_label_set_text (GTK_LABEL (sysex_status_label), buf);
             }
+#endif /* MIDI_ALSA */
             
         } else {
 
@@ -557,6 +560,7 @@ on_sysex_save_button_press(GtkWidget *widget, gpointer data)
 
     gtk_widget_show(edit_save_position_window);
 }
+#endif /* MIDI_ALSA */
 
 void
 on_edit_save_position_ok(GtkWidget *widget, gpointer data)

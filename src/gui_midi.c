@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004 Sean Bolton and others.
+ * Copyright (C) 2004-2005 Sean Bolton and others.
  *
  * Portions of this file may have come from specimen, copyright
  * (c) 2004 Pete Bessman under the GNU General Public License
@@ -17,7 +17,7 @@
  * PURPOSE.  See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public
- * License along with this library; if not, write to the Free
+ * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307, USA.
  */
@@ -25,6 +25,8 @@
 #ifdef HAVE_CONFIG_H
 #  include <config.h>
 #endif
+
+#ifdef MIDI_ALSA
 
 #include <alsa/asoundlib.h>
 
@@ -114,3 +116,25 @@ sysex_stop(void)
     sysex_enabled = 0;
 }
 
+#else /* MIDI_ALSA */
+
+#include "gui_main.h"
+#include "gui_midi.h"
+
+int sysex_enabled = 0;
+
+int
+sysex_start(sysex_callback_function *handler, char **errmsg)
+{
+    *errmsg = "MIDI sys-ex support not available!\n";
+    sysex_enabled = 0;
+    return 0;
+}
+
+void
+sysex_stop(void)
+{
+    sysex_enabled = 0;
+}
+
+#endif /* MIDI_ALSA */

@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004 Sean Bolton and others.
+ * Copyright (C) 2004-2005 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -120,6 +120,7 @@ create_main_window (const char *tag)
     GtkWidget *label43a;
     GtkWidget *volume_label;
     GtkWidget *label44;
+#ifdef MIDI_ALSA
     GtkWidget *sysex_enable_button;
     GtkObject *sysex_channel_spin_adj;
     GtkWidget *sysex_action_label;
@@ -127,6 +128,7 @@ create_main_window (const char *tag)
     GtkWidget *frame4;
     GtkWidget *table3;
     GtkWidget *label11;
+#endif /* MIDI_ALSA */
     GtkWidget *configuration_tab_label;
     GtkAccelGroup *accel_group;
 
@@ -422,6 +424,7 @@ create_main_window (const char *tag)
     gtk_misc_set_alignment (GTK_MISC (label44), 0, 0.5);
     gtk_misc_set_padding (GTK_MISC (label44), 2, 0);
 
+#ifdef MIDI_ALSA
     frame15 = gtk_frame_new ("Sys-Ex Patch Editing");
     gtk_widget_ref (frame15);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "frame15", frame15,
@@ -528,6 +531,7 @@ create_main_window (const char *tag)
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
     gtk_widget_set_sensitive (sysex_save_button, FALSE);
+#endif /* MIDI_ALSA */
 
     configuration_tab_label = gtk_label_new ("Configuration");
     gtk_widget_ref (configuration_tab_label);
@@ -662,6 +666,7 @@ create_main_window (const char *tag)
                         GTK_SIGNAL_FUNC (on_mono_mode_activate),
                         (gpointer)"both");
 
+#ifdef MIDI_ALSA
     /* connect sys-ex widgets */
     gtk_signal_connect (GTK_OBJECT (sysex_enable_button), "toggled",
                         GTK_SIGNAL_FUNC (on_sysex_enable_toggled),
@@ -675,6 +680,7 @@ create_main_window (const char *tag)
     gtk_signal_connect (GTK_OBJECT (sysex_save_button), "clicked",
                         GTK_SIGNAL_FUNC (on_sysex_save_button_press),
                         NULL);
+#endif /* MIDI_ALSA */
 
     /* connect test note widgets */
     gtk_signal_connect (GTK_OBJECT (gtk_range_get_adjustment (GTK_RANGE (test_note_key))),

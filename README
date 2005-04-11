@@ -7,9 +7,10 @@ Introduction
 ============
 hexter is a software synthesizer that models the sound generation of
 a Yamaha DX7 synthesizer.  It can easily load most DX7 patch bank
-files, accept patch editing commands via MIDI sys-ex messages, and
-recreate the sound of the DX7 with greater accuracy than any
-previous open-source emulation (that the author is aware of....)
+files, accept patch editing commands via MIDI sys-ex messages (ALSA
+systems only), and recreate the sound of the DX7 with greater
+accuracy than any previous open-source emulation (that the author is
+aware of....)
 
 hexter operates as a plugin for the Disposable Soft Synth Interface
 (DSSI).  DSSI is a plugin API for software instruments (soft synths)
@@ -18,7 +19,7 @@ Linux audio applications.  More information on DSSI can be found at:
 
   http://dssi.sourceforge.net/
 
-hexter is written by Sean Bolton, and copyright (c)2004 under the
+hexter is written by Sean Bolton, and copyright (c)2005 under the
 GNU General Public License, version 2 or later.  See the enclosed
 file COPYING for details.  While this software is 'free' within the
 requirements of this license, I (Sean) would appreciate any or all
@@ -39,18 +40,32 @@ hexter requires the following:
 
     - DSSI version 0.4 or greater, available from the 
         dssi.sourceforge.net address above.
+
     - liblo version 0.12 or greater, a library implementing the Open
-        Sound Control protocol, available at
+        Sound Control protocol, available at:
+
         http://plugin.org.uk/liblo/
+
     - pkgconfig with PKG_CONFIG_PATH set appropriately to pick up
         DSSI and liblo.
+
     - GTK+ version 1.2 or 2.x.
+
     - the LADSPA v1.x SDK.
+
     - the ALSA headers (DSSI plugins use ALSA structures, but not
         the actual drivers, so you don't necessarily need the
-        drivers installed.)
+        drivers installed.)  Users of non-Linux systems may use
+        libdssialsacompat, available at:
+
+        http://home.jps.net/~musound/
+
     - a working DSSI host.  hexter has been tested with the
-        jack-dssi-host available in the DSSI distribution.
+        jack-dssi-host, available in the DSSI distribution, and with
+        ghostess, available at:
+
+        http://home.jps.net/~musound/
+
     - automake 1.7 and autoconf 2.57 or better if you wish to
         recreate the build files.
 
@@ -192,11 +207,12 @@ controls for configuring hexter:
 
 Sys-Ex Patch Editing
 ====================
-hexter does not include a user interface for editing patches, but it
-can receive MIDI system exclusive messages from you favorite patch
-editor/librarian.  JSynthLib (http://www.jsynthlib.org/) works well
-in combination with the ALSA virmidi device, or you can try the
-ncurses-based editor included with hexter (see extra/tx_edit.c).
+hexter does not include a user interface for editing patches, but on
+ALSA systems, it can receive MIDI system exclusive messages from you
+favorite patch editor/librarian.  JSynthLib (http://www.jsynthlib.org/)
+works well in combination with the ALSA virmidi device, or you can
+try the ncurses-based editor included with hexter (see
+extra/tx_edit.c).
 
 Sys-ex patch editing is enabled on the 'Configuration' tab by
 depressing the 'Enable Sys-Ex Editing' button.  The hexter GUI then

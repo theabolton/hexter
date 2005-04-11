@@ -14,7 +14,6 @@ AC_HEADER_STDC
 AC_ENABLE_STATIC(no)
 AC_ENABLE_SHARED(yes)
 AC_LIBTOOL_DLOPEN
-dnl AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 
 AC_C_BIGENDIAN
@@ -57,11 +56,24 @@ fi
 AM_CONDITIONAL(BUILD_TEXTUI, test "x${with_textui}" = 'xyes')
 echo "GTK support: $with_gtk"
 
+dnl OS specific checks
+case "${host_os}" in
+darwin*)
+  darwin=yes
+  PKG_CHECK_MODULES(ALSA, libdssialsacompat)
+  #AC_DEFINE(DARWIN, 1, [Define if building for Mac OS X Darwin])
+  AC_DEFINE(MIDI_COREMIDI, 1, [Define for CoreMIDI MIDI support])
+  ;;
+*)
+  darwin=no
+  PKG_CHECK_MODULES(ALSA, alsa)
+  AC_DEFINE(MIDI_ALSA, 1, [Define for ALSA MIDI support])
+  ;;
+esac
+AM_CONDITIONAL(DARWIN, test x$darwin = xyes)
+
 dnl Require DSSI and liblo
 PKG_CHECK_MODULES(MODULE, dssi >= 0.4 liblo >= 0.12)
-
-dnl Require ALSA
-PKG_CHECK_MODULES(ALSA, alsa)
 
 dnl dnl Set PACKAGE_DATA_DIR in config.h.
 dnl if test "x${datadir}" = 'x${prefix}/share'; then
@@ -79,7 +91,7 @@ dnl packagesrcdir=`cd $srcdir && pwd`
 dnl AC_DEFINE_UNQUOTED(PACKAGE_SOURCE_DIR, "${packagesrcdir}")
 
 dnl Use lotsa flags if we have gcc.
-CFLAGS="$CFLAGS $MODULE_CFLAGS"
+CFLAGS="$CFLAGS $ALSA_CFLAGS $MODULE_CFLAGS"
 LDFLAGS="$LDFLAGS $MODULE_LIBS"
 changequote(,)dnl
 if test "x$GCC" = "xyes"; then
