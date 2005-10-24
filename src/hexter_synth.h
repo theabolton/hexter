@@ -149,9 +149,15 @@ void  hexter_synth_render_voices(unsigned long samples_done,
 /* these come right out of alsa/asoundef.h */
 #define MIDI_CTL_MSB_MODWHEEL           0x01    /**< Modulation */
 #define MIDI_CTL_MSB_MAIN_VOLUME        0x07    /**< Main volume */
+#define MIDI_CTL_MSB_GENERAL_PURPOSE1   0x10    /**< General purpose 1 */
+#define MIDI_CTL_MSB_GENERAL_PURPOSE2   0x11    /**< General purpose 2 */
+#define MIDI_CTL_MSB_GENERAL_PURPOSE3   0x12    /**< General purpose 3 */
+#define MIDI_CTL_MSB_GENERAL_PURPOSE4   0x13    /**< General purpose 4 */
 #define MIDI_CTL_LSB_MODWHEEL           0x21    /**< Modulation */
 #define MIDI_CTL_LSB_MAIN_VOLUME        0x27    /**< Main volume */
 #define MIDI_CTL_SUSTAIN                0x40    /**< Sustain pedal */
+#define MIDI_CTL_GENERAL_PURPOSE5       0x50    /**< General purpose 5 */
+#define MIDI_CTL_GENERAL_PURPOSE6       0x51    /**< General purpose 6 */
 #define MIDI_CTL_ALL_SOUNDS_OFF         0x78    /**< All sounds off */
 #define MIDI_CTL_RESET_CONTROLLERS      0x79    /**< Reset Controllers */
 #define MIDI_CTL_ALL_NOTES_OFF          0x7b    /**< All notes off */

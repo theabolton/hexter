@@ -1,3 +1,23 @@
+20051024 CVS commit smbolton
+
+* Added support for change operator coarse frequency in real time
+    via MIDI binding (for the Harvey Project).
+
+* Minor gcc4 fixes.
+
+20050411 CVS commit smbolton
+
+* Initial Mac OS X support (sys-ex patch edit reception is still
+    ALSA-only.)
+
+20050119 CVS commit smbolton
+
+( version bump to 0.5.9 )
+
+* gcc 2.9x '-finline-limit=5000' fix in configure.in
+
+* RPM bindir fix in src/Makefile.am
+
 20041229 version 0.5.8
 
 * Added a 'Volume' control, and implemented MIDI CC 7 'Volume'

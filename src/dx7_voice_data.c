@@ -31,6 +31,10 @@
 #include "dx7_voice.h"
 #include "dx7_voice_data.h"
 
+/* in dx7_voice_patches.c: */
+extern int         friendly_patch_count;
+extern dx7_patch_t friendly_patches[];
+
 dx7_patch_t dx7_voice_init_voice = {
   { 0x62, 0x63, 0x63, 0x5A, 0x63, 0x63, 0x63, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x38, 0x00, 0x00, 0x02,
@@ -61,7 +65,8 @@ int
 decode_7in6(const char *string, int expected_length, uint8_t *data)
 {
     int in, stated_length, reg, above, below, shift, out;
-    char *p, *tmpdata;
+    char *p;
+    uint8_t *tmpdata;
     int string_length = strlen(string);
     unsigned int sum = 0, stated_sum;
 

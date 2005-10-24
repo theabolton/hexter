@@ -368,6 +368,42 @@ hexter_instance_update_volume(hexter_instance_t* instance)
 }
 
 /*
+ * hexter_instance_update_fc
+ */
+void
+hexter_instance_update_fc(hexter_instance_t *instance, int opnum,
+                          signed int value)
+{
+    int i;
+    dx7_voice_t* voice;
+    int fc = value / 4;  /* frequency coarse is 0 to 31 */
+
+    /* update edit buffer */
+    if (!pthread_mutex_trylock(&instance->patches_mutex)) {
+
+        instance->current_patch_buffer[((5 - opnum) * 21) + 18] = fc;
+
+        pthread_mutex_unlock(&instance->patches_mutex);
+    } else {
+        /* In the unlikely event that we get here, it means another thread is
+         * currently updating the current patch buffer. We could do something
+         * like the 'pending_program_change' mechanism to cache this change
+         * until we can lock the mutex, if it's really important. */
+    }
+
+    /* check if any playing voices need updating */
+    for (i = 0; i < hexter_synth.global_polyphony; i++) {
+        voice = hexter_synth.voice[i];
+        if (voice->instance == instance && _PLAYING(voice)) {
+            dx7_op_t *op = &voice->op[opnum];
+
+            op->coarse = fc;
+            dx7_op_recalculate_increment(instance, op);
+        }
+    }
+}
+
+/*
  * hexter_instance_control_change
  */
 void
@@ -404,6 +440,20 @@ hexter_instance_control_change(hexter_instance_t *instance, unsigned int param,
 
       case MIDI_CTL_ALL_NOTES_OFF:
         hexter_instance_all_notes_off(instance);
+        break;
+
+      case MIDI_CTL_MSB_GENERAL_PURPOSE1:
+      case MIDI_CTL_MSB_GENERAL_PURPOSE2:
+      case MIDI_CTL_MSB_GENERAL_PURPOSE3:
+      case MIDI_CTL_MSB_GENERAL_PURPOSE4:
+        hexter_instance_update_fc(instance, param - MIDI_CTL_MSB_GENERAL_PURPOSE1,
+                                  value);
+        break;
+
+      case MIDI_CTL_GENERAL_PURPOSE5:
+      case MIDI_CTL_GENERAL_PURPOSE6:
+        hexter_instance_update_fc(instance, param - MIDI_CTL_GENERAL_PURPOSE5 + 4,
+                                  value);
         break;
 
       /* what others should we respond to? */

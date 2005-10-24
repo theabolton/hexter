@@ -55,7 +55,7 @@ hexter requires the following:
 
     - the ALSA headers (DSSI plugins use ALSA structures, but not
         the actual drivers, so you don't necessarily need the
-        drivers installed.)  Users of non-Linux systems may use
+        drivers installed.)  Users of non-ALSA systems may use
         libdssialsacompat, available at:
 
         http://home.jps.net/~musound/
@@ -90,14 +90,14 @@ aren't particularly helpful, so try this instead:
     flags, you MUST at least use '-finline' and a non-zero '-O' flag
     to get decent results.
 
-3. Enable debugging information if you desire: edit the file
+4. Enable debugging information if you desire: edit the file
     src/hexter.h, and define DSSP_DEBUG as explained in the
     comments.
     
-4. Do 'make'.  Hopefully it should build without warnings (or
+5. Do 'make'.  Hopefully it should build without warnings (or
     errors.)
 
-5. 'make install' will install the following:
+6. 'make install' will install the following:
 
     <prefix>/lib/dssi/hexter/hexter_gtk
     <prefix>/lib/dssi/hexter.so
@@ -172,7 +172,7 @@ the ".dx7" extension for raw patch dumps, so make sure you do.
 
 Synthesizer Configuration
 =========================
-On the 'Configuration' tab of the hexter GUI,  there are four
+On the 'Configuration' tab of the hexter GUI,  there are five
 controls for configuring hexter:
 
 - tuning: sets the tuning of this instance of the plugin,
@@ -238,7 +238,18 @@ librarian from that.
 MIDI Controller Mapping
 =======================
 Currently, hexter responds to MIDI volume, pitch bend, and sustain
-pedal controls.  Other controls will be implemented soon....
+pedal controls.  The 'coarse frequency' parameter for each operator
+can also be controlled in real time via the following MIDI control
+change mappings:
+
+Control change 16 (General Purpose #1 MSB) to operator 1 FC.
+Control change 17 (General Purpose #2 MSB) to operator 2 FC.
+Control change 18 (General Purpose #3 MSB) to operator 3 FC.
+Control change 19 (General Purpose #4 MSB) to operator 4 FC.
+Control change 80 (General Purpose #5)     to operator 5 FC.
+Control change 81 (General Purpose #6)     to operator 6 FC.
+
+Other controls will be implemented soon....
 
 Resources:
 ==========

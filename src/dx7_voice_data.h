@@ -37,9 +37,5 @@ int  dx7_patchbank_load(const char *filename, dx7_patch_t *firstpatch,
                         int maxpatches, char **errmsg);
 void hexter_data_patches_init(dx7_patch_t *patches);
 
-/* dx7_voice_patches.c */
-extern int         friendly_patch_count;
-extern dx7_patch_t friendly_patches[];
-
 #endif /* _DX7_VOICE_DATA_H */
 
