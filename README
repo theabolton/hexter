@@ -19,7 +19,7 @@ Linux audio applications.  More information on DSSI can be found at:
 
   http://dssi.sourceforge.net/
 
-hexter is written by Sean Bolton, and copyright (c)2005 under the
+hexter is written by Sean Bolton, and copyright (c)2006 under the
 GNU General Public License, version 2 or later.  See the enclosed
 file COPYING for details.  While this software is 'free' within the
 requirements of this license, I (Sean) would appreciate any or all
@@ -251,15 +251,30 @@ Control change 81 (General Purpose #6)     to operator 6 FC.
 
 Other controls will be implemented soon....
 
+Frequently Asked Questions
+==========================
+Q. The plugin seems to work fine, but the GUI never appears. Why?
+
+A. Make sure the hostname of your machine is resolvable (if not, the
+OSC messages can't be sent between host and GUI).  If your machine's
+hostname is 'foo.bar.net', make sure you either have an entry for
+'foo.bar.net' in /etc/hosts, or that your DNS server can resolve it.
+Test this with e.g. 'ping foo.bar.net'. To test that the GUI itself
+works, you can start it by itself (without a DSSI host) by giving it
+the '-test' option (plus three dummy arguments), for example:
+
+    $ <prefix>/lib/dssi/hexter/hexter_gtk -test a b c
+
 Resources:
 ==========
-http://www.geocities.com/SunsetStrip/Lounge/2133/dx7_tx7.html
+http://www.myjavaserver.com/~christopher/dx7_tx7.html
     Chris Dodunski's DX7 page, has much info as well as links to
     patch files.
 
-http://www.math.uga.edu/~djb/html/dx7.html
+http://www.maths.abdn.ac.uk/~bensondj/html/dx7.html
     Dave Benson's DX7 page, has much info as well as links to patch
     files.
 
 http://www.gozen.demon.co.uk/godric/synth/patches.html
+    Godric Wilkie's patch collection.
 

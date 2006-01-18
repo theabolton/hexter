@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004 Sean Bolton and others.
+ * Copyright (C) 2004-2006 Sean Bolton and others.
  *
  * Portions of this file may have come from Chris Cannam and Steve
  * Harris's public domain DSSI example code.
@@ -72,6 +72,7 @@ edit_buffer_t edit_buffer;
 int           edit_receive_channel = 0;
 
 int host_requested_quit = 0;
+int gui_test_mode = 0;
 
 /* ==== OSC handling ==== */
 
@@ -262,8 +263,16 @@ osc_data_on_socket_callback(gpointer data, gint source,
 gint
 update_request_timeout_callback(gpointer data)
 {
-    /* send our update request */
-    lo_send(osc_host_address, osc_update_path, "s", osc_self_url);
+    if (!gui_test_mode) {
+
+        /* send our update request */
+        lo_send(osc_host_address, osc_update_path, "s", osc_self_url);
+
+    } else {
+
+        gtk_widget_show(main_window);
+
+    }
 
     return FALSE;  /* don't need to do this again */
 }
@@ -293,6 +302,10 @@ main(int argc, char *argv[])
     if (argc != 5) {
         fprintf(stderr, "usage: %s <osc url> <plugin dllname> <plugin label> <user-friendly id>\n", argv[0]);
         exit(1);
+    }
+    if (!strcmp(argv[1], "-test")) {
+        gui_test_mode = 1;
+        argv[1] = "osc.udp://localhost:9/test/mode";
     }
     user_friendly_id = argv[4];
 

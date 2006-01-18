@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004 Sean Bolton and others.
+ * Copyright (C) 2004-2006 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -26,9 +26,7 @@
 
 #include "gui_images.h"
 
-#include "bitmap_about.xbm"
-
-// #include "bitmap_logo.xbm"
+#include "bitmap_about.xpm"
 
 /* This is a dummy pixmap we use when a pixmap can't be found. */
 static char *dummy_pixmap_xpm[] = {
@@ -60,53 +58,30 @@ create_dummy_pixmap                    (GtkWidget       *widget)
 }
 
 /* window must be realized before you call this */
-static GtkWidget *
-create_colored_pixmap_from_data(GtkWidget   *window,
-                                const gchar *bitmap_data,
-                                gint         bitmap_width,
-                                gint         bitmap_height)
+GtkWidget *
+create_pixmap_from_xpm(GtkWidget *window, char *xpm_data[])
 {
     GdkColormap *colormap;
-    GdkColor     fg_color;
-    GdkColor     bg_color;
+    GdkBitmap   *mask;
     GdkPixmap   *gdkpixmap;
     GtkWidget   *pixmap;
 
-    colormap = gtk_widget_get_colormap (window);
-    fg_color.red = 0;
-    fg_color.green = 0;
-    fg_color.blue = 0;
-    if (!gdk_color_alloc(colormap, &fg_color)) {
-        g_warning("couldn't allocate fg color");
-    }
-    bg_color.red = 0x4848;
-    bg_color.green = 0xf6f6;
-    bg_color.blue = 0xfefe;
-    if (!gdk_color_alloc(colormap, &bg_color)) {
-        g_warning("couldn't allocate bg color");
-    }
-    gdkpixmap = gdk_pixmap_create_from_data ((GdkWindow *)(window->window),
-                                             bitmap_data,
-                                             bitmap_width,
-                                             bitmap_height,
-                                             -1,
-                                             &fg_color,
-                                             &bg_color);
+    colormap = gtk_widget_get_colormap(window);
+    gdkpixmap = gdk_pixmap_colormap_create_from_xpm_d(NULL, colormap, &mask,
+                    NULL, xpm_data);
     if (gdkpixmap == NULL) {
         g_warning("error creating pixmap");
         return create_dummy_pixmap (window);
     }
-    pixmap = gtk_pixmap_new (gdkpixmap, NULL);
-    gdk_pixmap_unref (gdkpixmap);
+    pixmap = gtk_pixmap_new(gdkpixmap, mask);
+    gdk_pixmap_unref(gdkpixmap);
+    gdk_bitmap_unref(mask);
     return pixmap;
 }
 
 GtkWidget *
 create_about_pixmap(GtkWidget *window)
 {
-    return create_colored_pixmap_from_data(window,
-                                           bitmap_about_bits,
-                                           bitmap_about_width,
-                                           bitmap_about_height);
+    return create_pixmap_from_xpm(window, bitmap_about_xpm);
 }
 

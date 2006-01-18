@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004-2005 Sean Bolton and others.
+ * Copyright (C) 2004-2006 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -741,6 +741,7 @@ create_about_window (const char *tag)
     gtk_widget_show (about_label);
     gtk_box_pack_start (GTK_BOX (vbox2), about_label, FALSE, FALSE, 0);
     // gtk_label_set_line_wrap (GTK_LABEL (about_label), TRUE);
+    gtk_label_set_justify (GTK_LABEL (about_label), GTK_JUSTIFY_CENTER);
     gtk_misc_set_padding (GTK_MISC (about_label), 5, 5);
 
     closeabout = gtk_button_new_with_label ("Dismiss");

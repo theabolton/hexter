@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004 Sean Bolton and others.
+ * Copyright (C) 2004-2005 Sean Bolton and others.
  *
  * Portions of this file may have come from Peter Hanappe's
  * Fluidsynth, copyright (C) 2003 Peter Hanappe and others.
@@ -558,7 +558,11 @@ const DSSI_Descriptor *dssi_descriptor(unsigned long index)
     }
 }
 
+#ifdef __GNUC__
+__attribute__((constructor)) void init()
+#else
 void _init()
+#endif
 {
     char **port_names;
     LADSPA_PortDescriptor *port_descriptors;
@@ -646,7 +650,11 @@ void _init()
     }
 }
 
+#ifdef __GNUC__
+__attribute__((destructor)) void fini()
+#else
 void _fini()
+#endif
 {
     if (hexter_LADSPA_descriptor) {
         free((LADSPA_PortDescriptor *) hexter_LADSPA_descriptor->PortDescriptors);

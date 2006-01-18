@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004-2005 Sean Bolton and others.
+ * Copyright (C) 2004-2006 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -115,8 +115,10 @@ void
 on_menu_about_activate                 (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
 {
-    char buf[256];
-    snprintf(buf, 256, "hexter version: " VERSION "\n"
+    char buf[512];
+    snprintf(buf, 512, "This program licensed under the GNU General Public License v2.\n"
+                       "See the enclosed file COPYING for details. NO WARRANTY.\n\n"
+                       "hexter version: " VERSION "\n"
                        "hexter URL: %s\n"
                        "host URL: %s\n", osc_self_url, osc_host_url);
     gtk_label_set_text (GTK_LABEL (about_label), buf);

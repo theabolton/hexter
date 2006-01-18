@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004 Sean Bolton and others.
+ * Copyright (C) 2004-2006 Sean Bolton and others.
  *
  * Portions of this file may have come from Peter Hanappe's
  * Fluidsynth, copyright (C) 2003 Peter Hanappe and others.
@@ -59,6 +59,42 @@ dx7_voice_start_voice(dx7_voice_t *voice)
 }
 
 /*
+ * hexter_instance_clear_held_keys
+ */
+static inline void
+hexter_instance_clear_held_keys(hexter_instance_t *instance)
+{
+    int i;
+
+    for (i = 0; i < 8; i++)
+        instance->held_keys[i] = -1;
+}
+
+/*
+ * hexter_instance_remove_held_key
+ */
+static inline void
+hexter_instance_remove_held_key(hexter_instance_t *instance, unsigned char key)
+{
+    int i;
+
+    /* check if this key is in list of held keys; if so, remove it and
+     * shift the other keys up */
+    /* DEBUG_MESSAGE(DB_NOTE, " note-off key list before: %d %d %d %d %d %d %d %d\n", instance->held_keys[0], instance->held_keys[1], instance->held_keys[2], instance->held_keys[3], instance->held_keys[4], instance->held_keys[5], instance->held_keys[6], instance->held_keys[7]); */
+    for (i = 7; i >= 0; i--) {
+        if (instance->held_keys[i] == key)
+            break;
+    }
+    if (i >= 0) {
+        for (; i < 7; i++) {
+            instance->held_keys[i] = instance->held_keys[i + 1];
+        }
+        instance->held_keys[7] = -1;
+    }
+    /* DEBUG_MESSAGE(DB_NOTE, " note-off key list after: %d %d %d %d %d %d %d %d\n", instance->held_keys[0], instance->held_keys[1], instance->held_keys[2], instance->held_keys[3], instance->held_keys[4], instance->held_keys[5], instance->held_keys[6], instance->held_keys[7]); */
+}
+
+/*
  * hexter_synth_all_voices_off
  *
  * stop processing all notes of all instances immediately
@@ -72,6 +108,8 @@ hexter_synth_all_voices_off(void)
     for (i = 0; i < hexter_synth.global_polyphony; i++) {
         voice = hexter_synth.voice[i];
         if (_PLAYING(voice)) {
+            if (voice->instance->held_keys[0] != -1)
+                hexter_instance_clear_held_keys(voice->instance);
             dx7_voice_off(voice);
         }
     }
@@ -94,6 +132,7 @@ hexter_instance_all_voices_off(hexter_instance_t *instance)
             dx7_voice_off(voice);
         }
     }
+    hexter_instance_clear_held_keys(instance);
 }
 
 /*
@@ -107,6 +146,8 @@ hexter_instance_note_off(hexter_instance_t *instance, unsigned char key,
 {
     int i;
     dx7_voice_t *voice;
+
+    hexter_instance_remove_held_key(instance, key);
 
     for (i = 0; i < hexter_synth.global_polyphony; i++) {
         voice = hexter_synth.voice[i];
@@ -273,6 +314,9 @@ hexter_instance_note_on(hexter_instance_t *instance, unsigned char key,
                         unsigned char velocity)
 {
     dx7_voice_t* voice;
+
+    if (key > 127 || velocity > 127)
+        return;  /* MidiKeys 1.6b3 sends bad notes.... */
 
     if (instance->monophonic) {
 
@@ -676,7 +720,6 @@ char *
 hexter_instance_handle_monophonic(hexter_instance_t *instance, const char *value)
 {
     int mode = -1;
-    int i;
 
     if (!strcmp(value, "on")) mode = DSSP_MONO_MODE_ON;
     else if (!strcmp(value, "once")) mode = DSSP_MONO_MODE_ONCE;
@@ -701,9 +744,7 @@ hexter_instance_handle_monophonic(hexter_instance_t *instance, const char *value
             hexter_instance_all_voices_off(instance);
             instance->max_voices = 1;
             instance->mono_voice = NULL;
-            for (i = 0; i < 8; i++)
-                instance->held_keys[i] = -1;
-
+            hexter_instance_clear_held_keys(instance);
             dssp_voicelist_mutex_unlock();
         }
         instance->monophonic = mode;
@@ -739,6 +780,8 @@ hexter_instance_handle_polyphony(hexter_instance_t *instance, const char *value)
                     i < hexter_synth.global_polyphony; i++) {
             voice = hexter_synth.voice[i];
             if (voice->instance == instance && _PLAYING(voice)) {
+                if (voice->instance->held_keys[0] != -1)
+                    hexter_instance_clear_held_keys(voice->instance);
                 dx7_voice_off(voice);
             }
         }
@@ -772,6 +815,8 @@ hexter_synth_handle_global_polyphony(const char *value)
     for (i = polyphony; i < HEXTER_MAX_POLYPHONY; i++) {
         voice = hexter_synth.voice[i];
         if (_PLAYING(voice)) {
+            if (voice->instance->held_keys[0] != -1)
+                hexter_instance_clear_held_keys(voice->instance);
             dx7_voice_off(voice);
         }
     }

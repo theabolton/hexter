@@ -1,3 +1,16 @@
+20060108 version 0.5.9
+
+* Added GUI '-test' magic host URL argument for starting GUI without
+    a host.
+
+* Improved the 'About' dialog with a new color pixmap.
+
+* Fixed the held key tracking.
+
+* Use gcc/glibc 'constructor' and 'destructor' attributes instead of
+    the deprecated _init() and _fini() functions (needed for OS X
+    10.4 'Tiger').
+
 20051024 CVS commit smbolton
 
 * Added support for change operator coarse frequency in real time

@@ -14,7 +14,7 @@ plugin_LTLIBRARIES = hexter.la
 
 hexter_gtk_SOURCES = \
 	gui_main.c \
-	bitmap_about.xbm \
+	bitmap_about.xpm \
 	dx7_voice_data.c \
 	dx7_voice_data.h \
 	dx7_voice_patches.c \
@@ -65,9 +65,5 @@ hexter_la_SOURCES = \
 
 hexter_la_LIBADD = -lm
 
-if DARWIN
 hexter_la_LDFLAGS = -module -avoid-version
-else
-hexter_la_LDFLAGS = -module -avoid-version -Wc,-nostartfiles
-endif
 

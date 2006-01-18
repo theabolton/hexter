@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004 Sean Bolton and others.
+ * Copyright (C) 2004-2006 Sean Bolton and others.
  *
  * Portions of this file may have come from Juan Linietsky's
  * rx-saturno, copyright (C) 2002 by Juan Linietsky.
@@ -152,43 +152,16 @@ void
 dx7_voice_note_off(hexter_instance_t *instance, dx7_voice_t *voice,
                    unsigned char key, unsigned char rvelocity)
 {
-    unsigned char previous_top_key;
-
     DEBUG_MESSAGE(DB_NOTE, " dx7_voice_note_off: called for voice %p, key %d\n", voice, key);
 
     /* save release velocity */
     voice->rvelocity = rvelocity;
 
-    if (instance->monophonic) {
-
-        /* remove this key from list of held keys */
-
-        int i;
-
-        /* check if this key is in list of held keys; if so, remove it and
-         * shift the other keys up */
-        // DEBUG_MESSAGE(DB_NOTE, " note-off key list before: %d %d %d %d %d %d %d %d\n", instance->held_keys[0], instance->held_keys[1], instance->held_keys[2], instance->held_keys[3], instance->held_keys[4], instance->held_keys[5], instance->held_keys[6], instance->held_keys[7]);
-        previous_top_key = instance->held_keys[0];
-        for (i = 7; i >= 0; i--) {
-            if (instance->held_keys[i] == key)
-                break;
-        }
-        if (i >= 0) {
-            for (; i < 7; i++) {
-                instance->held_keys[i] = instance->held_keys[i + 1];
-            }
-            instance->held_keys[7] = -1;
-        }
-        // DEBUG_MESSAGE(DB_NOTE, " note-off key list after: %d %d %d %d %d %d %d %d\n", instance->held_keys[0], instance->held_keys[1], instance->held_keys[2], instance->held_keys[3], instance->held_keys[4], instance->held_keys[5], instance->held_keys[6], instance->held_keys[7]);
-    }
-
     if (instance->monophonic) {  /* monophonic mode */
 
-        if (instance->held_keys[0] >= 0) {
+        if (instance->held_keys[0] >= 0) {  /* still some keys held */
 
-            /* still some keys held */
-
-            if (instance->held_keys[0] != previous_top_key) {
+            if (voice->key != instance->held_keys[0]) {
 
                 /* most-recently-played key has changed */
                 voice->key = instance->held_keys[0];
