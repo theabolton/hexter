@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004-2006 Sean Bolton and others.
+ * Copyright (C) 2004-2007 Sean Bolton and others.
  *
  * Portions of this file may have come from Peter Hanappe's
  * Fluidsynth, copyright (C) 2003 Peter Hanappe and others.
@@ -347,21 +347,24 @@ hexter_instance_note_on(hexter_instance_t *instance, unsigned char key,
 /*
  * hexter_instance_key_pressure
  */
-void
+inline void
 hexter_instance_key_pressure(hexter_instance_t *instance, unsigned char key,
                              unsigned char pressure)
 {
     int i;
     dx7_voice_t* voice;
 
+    if (instance->key_pressure[key] == pressure)
+        return;
+
     /* save it for future voices */
     instance->key_pressure[key] = pressure;
 
-    /* check if any playing voices need updating */
+    /* flag any playing voices as needing updating */
     for (i = 0; i < hexter_synth.global_polyphony; i++) {
         voice = hexter_synth.voice[i];
         if (voice->instance == instance && _PLAYING(voice) && voice->key == key) {
-            dx7_voice_update_pressure_mod(instance, voice);
+            voice->mods_serial--;
         }
     }
 }
@@ -388,21 +391,52 @@ hexter_instance_damp_voices(hexter_instance_t* instance)
 }
 
 /*
- * hexter_instance_update_wheel_mod
+ * hexter_instance_update_mod_wheel
  */
-void
-hexter_instance_update_wheel_mod(hexter_instance_t* instance)
+static inline void
+hexter_instance_update_mod_wheel(hexter_instance_t* instance)
 {
-    /* instance->mod_wheel = (float)(instance->cc[MIDI_CTL_MSB_MODWHEEL] * 128 +
-     *                               instance->cc[MIDI_CTL_LSB_MODWHEEL]) / 16256.0f;
-     * if (instance->mod_wheel < 0.0f)
-     *     instance->mod_wheel = 0.0f; -FIX- */
+    int mod = instance->cc[MIDI_CTL_MSB_MODWHEEL] * 128 +
+              instance->cc[MIDI_CTL_LSB_MODWHEEL];
+
+    if (mod > 16256) mod = 16256;
+    instance->mod_wheel = (float)mod / 16256.0f;
+    instance->mods_serial++;
+
+}
+
+/*
+ * hexter_instance_update_breath
+ */
+static inline void
+hexter_instance_update_breath(hexter_instance_t* instance)
+{
+    int mod = instance->cc[MIDI_CTL_MSB_BREATH] * 128 +
+              instance->cc[MIDI_CTL_LSB_BREATH];
+
+    if (mod > 16256) mod = 16256;
+    instance->breath = (float)mod / 16256.0f;
+    instance->mods_serial++;
+}
+
+/*
+ * hexter_instance_update_foot
+ */
+static inline void
+hexter_instance_update_foot(hexter_instance_t* instance)
+{
+    int mod = instance->cc[MIDI_CTL_MSB_FOOT] * 128 +
+              instance->cc[MIDI_CTL_LSB_FOOT];
+
+    if (mod > 16256) mod = 16256;
+    instance->foot = (float)mod / 16256.0f;
+    instance->mods_serial++;
 }
 
 /*
  * hexter_instance_update_volume
  */
-void
+static inline void
 hexter_instance_update_volume(hexter_instance_t* instance)
 {
     instance->cc_volume = instance->cc[MIDI_CTL_MSB_MAIN_VOLUME] * 128 +
@@ -454,36 +488,56 @@ void
 hexter_instance_control_change(hexter_instance_t *instance, unsigned int param,
                                signed int value)
 {
+    switch (param) {  /* these controls we act on always */
+
+      case MIDI_CTL_SUSTAIN:
+        DEBUG_MESSAGE(DB_NOTE, " hexter_instance_control_change: got sustain control of %d\n", value);
+        instance->cc[param] = value;
+        if (value < 64)
+            hexter_instance_damp_voices(instance);
+        return;
+
+      case MIDI_CTL_ALL_SOUNDS_OFF:
+        instance->cc[param] = value;
+        hexter_instance_all_voices_off(instance);
+        return;
+
+      case MIDI_CTL_RESET_CONTROLLERS:
+        instance->cc[param] = value;
+        hexter_instance_init_controls(instance);
+        return;
+
+      case MIDI_CTL_ALL_NOTES_OFF:
+        instance->cc[param] = value;
+        hexter_instance_all_notes_off(instance);
+        return;
+    }
+
+    if (instance->cc[param] == value)  /* do nothing if control value has not changed */
+        return;
+
     instance->cc[param] = value;
 
     switch (param) {
 
       case MIDI_CTL_MSB_MODWHEEL:
       case MIDI_CTL_LSB_MODWHEEL:
-        hexter_instance_update_wheel_mod(instance);
+        hexter_instance_update_mod_wheel(instance);
+        break;
+
+      case MIDI_CTL_MSB_BREATH:
+      case MIDI_CTL_LSB_BREATH:
+        hexter_instance_update_breath(instance);
+        break;
+
+      case MIDI_CTL_MSB_FOOT:
+      case MIDI_CTL_LSB_FOOT:
+        hexter_instance_update_foot(instance);
         break;
 
       case MIDI_CTL_MSB_MAIN_VOLUME:
       case MIDI_CTL_LSB_MAIN_VOLUME:
         hexter_instance_update_volume(instance);
-        break;
-
-      case MIDI_CTL_SUSTAIN:
-        DEBUG_MESSAGE(DB_NOTE, " hexter_instance_control_change: got sustain control of %d\n", value);
-        if (value < 64)
-            hexter_instance_damp_voices(instance);
-        break;
-
-      case MIDI_CTL_ALL_SOUNDS_OFF:
-        hexter_instance_all_voices_off(instance);
-        break;
-
-      case MIDI_CTL_RESET_CONTROLLERS:
-        hexter_instance_init_controls(instance);
-        break;
-
-      case MIDI_CTL_ALL_NOTES_OFF:
-        hexter_instance_all_notes_off(instance);
         break;
 
       case MIDI_CTL_MSB_GENERAL_PURPOSE1:
@@ -501,7 +555,6 @@ hexter_instance_control_change(hexter_instance_t *instance, unsigned int param,
         break;
 
       /* what others should we respond to? */
-      /* -FIX- also want foot control, breath control */
 
       /* these we ignore (let the host handle):
        *  BANK_SELECT_MSB
@@ -511,7 +564,7 @@ hexter_instance_control_change(hexter_instance_t *instance, unsigned int param,
        *  NRPN_LSB
        *  RPN_MSB
        *  RPN_LSB
-       * -FIX- no! we need RPN (0, 0) Pitch Bend Sensitivity!
+       * (may want to eventually implement RPN (0, 0) Pitch Bend Sensitivity)
        */
     }
 }
@@ -523,19 +576,11 @@ void
 hexter_instance_channel_pressure(hexter_instance_t *instance,
                                  signed int pressure)
 {
-    int i;
-    dx7_voice_t* voice;
+    if (instance->channel_pressure == pressure)
+        return;
 
-    /* save it for future voices */
     instance->channel_pressure = pressure;
-
-    /* check if any playing voices need updating */
-    for (i = 0; i < hexter_synth.global_polyphony; i++) {
-        voice = hexter_synth.voice[i];
-        if (voice->instance == instance && _PLAYING(voice)) {
-            dx7_voice_update_pressure_mod(instance, voice);
-        }
-    }
+    instance->mods_serial++;
 }
 
 /*
@@ -544,20 +589,9 @@ hexter_instance_channel_pressure(hexter_instance_t *instance,
 void
 hexter_instance_pitch_bend(hexter_instance_t *instance, signed int value)
 {
-    int i;
-    dx7_voice_t* voice;
-
     instance->pitch_wheel = value; /* ALSA pitch bend is already -8192 - 8191 */
-    instance->pitch_bend = (double)(value * instance->pitch_wheel_sensitivity)
+    instance->pitch_bend = (double)(value * instance->pitch_bend_range)
                                / 8192.0;
-
-    /* check if any playing voices need updating */
-    for (i = 0; i < hexter_synth.global_polyphony; i++) {
-        voice = hexter_synth.voice[i];
-        if (voice->instance == instance && _PLAYING(voice)) {
-            dx7_voice_update_pitch_bend(instance, voice);
-        }
-    }
 }
 
 /*
@@ -567,7 +601,6 @@ void
 hexter_instance_init_controls(hexter_instance_t *instance)
 {
     int i;
-    dx7_voice_t* voice;
 
     /* if sustain was on, we need to damp any sustained voices */
     if (HEXTER_INSTANCE_SUSTAINED(instance)) {
@@ -580,22 +613,46 @@ hexter_instance_init_controls(hexter_instance_t *instance)
         instance->cc[i] = 0;
     }
     instance->channel_pressure = 0;
-    instance->pitch_wheel_sensitivity = 2;  /* two semi-tones */
     instance->pitch_wheel = 0;
     instance->pitch_bend = 0.0;
     instance->cc[MIDI_CTL_MSB_MAIN_VOLUME] = 127; /* full volume */
 
-    hexter_instance_update_wheel_mod(instance);
+    hexter_instance_update_mod_wheel(instance);
+    hexter_instance_update_breath(instance);
+    hexter_instance_update_foot(instance);
     hexter_instance_update_volume(instance);
 
-    /* check if any playing voices need updating */
-    for (i = 0; i < hexter_synth.global_polyphony; i++) {
-        voice = hexter_synth.voice[i];
-        if (voice->instance == instance && _PLAYING(voice)) {
-            dx7_voice_update_pressure_mod(instance, voice);
-            dx7_voice_update_pitch_bend(instance, voice);
-        }
-    }
+    instance->mods_serial++;
+}
+
+static inline int
+limit(int x, int min, int max)
+{
+    if (x < min) return min;
+    if (x > max) return max;
+    return x;
+}
+
+/*
+ * hexter_instance_set_performance_data
+ */
+void
+hexter_instance_set_performance_data(hexter_instance_t *instance)
+{
+    uint8_t *perf_buffer = instance->performance_buffer;
+
+    /* set instance performance parameters */
+    /* -FIX- later these will optionally come from patch */
+    instance->pitch_bend_range      = limit(perf_buffer[3], 0, 12);
+    instance->portamento_time       = limit(perf_buffer[5], 0, 99);
+    instance->mod_wheel_sensitivity = limit(perf_buffer[9], 0, 15);
+    instance->mod_wheel_assign      = limit(perf_buffer[10], 0, 7);
+    instance->foot_sensitivity      = limit(perf_buffer[11], 0, 15);
+    instance->foot_assign           = limit(perf_buffer[12], 0, 7);
+    instance->pressure_sensitivity  = limit(perf_buffer[13], 0, 15);
+    instance->pressure_assign       = limit(perf_buffer[14], 0, 7);
+    instance->breath_sensitivity    = limit(perf_buffer[15], 0, 15);
+    instance->breath_assign         = limit(perf_buffer[16], 0, 7);
 }
 
 /*
@@ -709,6 +766,28 @@ hexter_instance_handle_edit_buffer(hexter_instance_t *instance,
     }
 
     pthread_mutex_unlock(&instance->patches_mutex);
+
+    return NULL; /* success */
+}
+
+char *
+hexter_instance_handle_performance(hexter_instance_t *instance,
+                                   const char *value)
+{
+    pthread_mutex_lock(&instance->patches_mutex);
+
+    DEBUG_MESSAGE(DB_DATA, " hexter_instance_handle_performance: received new global performance parameters\n");
+
+    if (!decode_7in6(value, DX7_PERFORMANCE_SIZE, instance->performance_buffer)) {
+        pthread_mutex_unlock(&instance->patches_mutex);
+        return dssp_error_message("performance edit failed: corrupt data");
+    }
+
+    hexter_instance_set_performance_data(instance);
+
+    pthread_mutex_unlock(&instance->patches_mutex);
+
+    /* we eventually may want to update playing voices here */
 
     return NULL; /* success */
 }
@@ -833,14 +912,25 @@ void
 hexter_synth_render_voices(unsigned long samples_done,
                            unsigned long sample_count, int do_control_update)
 {
+    hexter_instance_t *instance;
     unsigned long i;
     dx7_voice_t* voice;
+
+    /* update each LFO */
+    for (instance = hexter_synth.instances; instance;
+             instance = instance->next) {
+        dx7_lfo_update(instance, sample_count);
+    }
 
     /* render each active voice */
     for (i = 0; i < hexter_synth.global_polyphony; i++) {
         voice = hexter_synth.voice[i];
     
         if (_PLAYING(voice)) {
+            if (voice->mods_serial != voice->instance->mods_serial) {
+                dx7_voice_update_mod_depths(voice->instance, voice);
+                voice->mods_serial = voice->instance->mods_serial;
+            }
             dx7_voice_render(voice->instance, voice,
                              voice->instance->output + samples_done,
                              sample_count, do_control_update);

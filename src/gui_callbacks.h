@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004-2005 Sean Bolton and others.
+ * Copyright (C) 2004-2006 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -25,6 +25,7 @@
 #  include <config.h>
 #endif
 
+#include <stdint.h>
 #include <gtk/gtk.h>
 
 void on_menu_import_activate(GtkMenuItem *menuitem, gpointer user_data);
@@ -59,6 +60,8 @@ void on_sysex_save_button_press(GtkWidget *widget, gpointer data);
 #endif /* MIDI_ALSA */
 void on_edit_save_position_ok(GtkWidget *widget, gpointer data);
 void on_edit_save_position_cancel(GtkWidget *widget, gpointer data);
+void on_performance_spin_change(GtkWidget *widget, gpointer data);
+void on_performance_assign_toggled(GtkWidget *widget, gpointer data);
 void on_test_note_slider_change(GtkWidget *widget, gpointer data);
 void on_test_note_button_press(GtkWidget *widget, gpointer data);
 void display_notice(char *message1, char *message2);
@@ -67,6 +70,8 @@ void update_voice_widget(int port, float value);
 void update_from_program_select(unsigned long bank, unsigned long program);
 void update_patches(const char *key, const char *value);
 void update_edit_buffer(const char *value);
+void update_performance_widgets(uint8_t *performance);
+void update_performance(const char *value);
 void update_monophonic(const char *value);
 void update_polyphony(const char *value);
 void update_global_polyphony(const char *value);

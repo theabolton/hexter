@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004 Sean Bolton and others.
+ * Copyright (C) 2004, 2006 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -305,47 +305,14 @@ gui_data_clear_edit_buffer(void)
     lo_send(osc_host_address, osc_configure_path, "ss", "edit_buffer", "off");
 }
 
-/*
- * dx7_patch_pack
- */
 void
-dx7_patch_pack(uint8_t *unpacked_patch, dx7_patch_t *packed_patch, uint8_t number)
+gui_data_send_performance_buffer(uint8_t *performance_buffer)
 {
-    uint8_t *up = unpacked_patch,
-            *pp = (uint8_t *)(&packed_patch[number]);
-    int     i, j;
+    char *p;
 
-    /* ugly because it used to be 68000 assembly... */
-    for (i = 6; i > 0; i--) {
-        for (j = 11; j > 0; j--) {
-            *pp++ = *up++;
-        }                           /* through rd */
-        *pp++ = ((*up) & 0x03) | (((*(up + 1)) & 0x03) << 2);
-        up += 2;                    /* rc+lc */
-        *pp++ = ((*up) & 0x07) | (((*(up + 7)) & 0x0f) << 3);
-        up++;                       /* pd+rs */
-        *pp++ = ((*up) & 0x03) | (((*(up + 1)) & 0x07) << 2);
-        up += 2;                    /* kvs+ams */
-        *pp++ = *up++;              /* ol */
-        *pp++ = ((*up) & 0x01) | (((*(up + 1)) & 0x1f) << 1);
-        up += 2;                    /* fc+m */
-        *pp++ = *up;
-        up += 2;                    /* ff */
-    }                               /* operator done */
-    for (i = 9; i > 0; i--) {
-        *pp++ = *up++;
-    }                               /* through algorithm */
-    *pp++ = ((*up) & 0x07) | (((*(up + 1)) & 0x01) << 3);
-    up += 2;                        /* oks+fb */
-    for (i = 4; i > 0; i--) {
-        *pp++ = *up++;
-    }                               /* through lamd */
-    *pp++ = ((*up) & 0x01) |
-            (((*(up + 1)) & 0x07) << 1) |
-            (((*(up + 2)) & 0x07) << 4);
-    up += 3;                        /* lpms+lfw+lks */
-    for (i = 11; i > 0; i--) {
-        *pp++ = *up++;
-    }                               /* through name */
+    if ((p = encode_7in6(performance_buffer, DX7_PERFORMANCE_SIZE))) {
+        lo_send(osc_host_address, osc_configure_path, "ss", "performance", p);
+        free(p);
+    }
 }
 

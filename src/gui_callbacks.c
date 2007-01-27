@@ -121,6 +121,7 @@ on_menu_about_activate                 (GtkMenuItem     *menuitem,
                        "hexter version: " VERSION "\n"
                        "hexter URL: %s\n"
                        "host URL: %s\n", osc_self_url, osc_host_url);
+    /* -FIX- include credits for Jamie Bullock and Martin Tarenskeen */
     gtk_label_set_text (GTK_LABEL (about_label), buf);
     gtk_widget_show(about_window);
 }
@@ -596,6 +597,73 @@ on_edit_save_position_cancel(GtkWidget *widget, gpointer data)
 }
 
 void
+send_performance(void)
+{
+    uint8_t perf_buffer[DX7_PERFORMANCE_SIZE];
+    uint8_t p;
+
+    memcpy(perf_buffer, dx7_init_performance, DX7_PERFORMANCE_SIZE);
+
+    perf_buffer[3]  = lrintf(GTK_ADJUSTMENT(performance_spin_adjustments[PP_PITCH_BEND_RANGE])->value);
+    perf_buffer[5]  = lrintf(GTK_ADJUSTMENT(performance_spin_adjustments[PP_PORTAMENTO_TIME])->value);
+    perf_buffer[9]  = lrintf(GTK_ADJUSTMENT(performance_spin_adjustments[PP_MOD_WHEEL_SENSITIVITY])->value);
+    perf_buffer[11] = lrintf(GTK_ADJUSTMENT(performance_spin_adjustments[PP_FOOT_SENSITIVITY])->value);
+    perf_buffer[13] = lrintf(GTK_ADJUSTMENT(performance_spin_adjustments[PP_PRESSURE_SENSITIVITY])->value);
+    perf_buffer[15] = lrintf(GTK_ADJUSTMENT(performance_spin_adjustments[PP_BREATH_SENSITIVITY])->value);
+
+    p = (GTK_TOGGLE_BUTTON(performance_assign_widgets[PP_MOD_WHEEL_ASSIGN][0])->active ? 1 : 0) +
+        (GTK_TOGGLE_BUTTON(performance_assign_widgets[PP_MOD_WHEEL_ASSIGN][1])->active ? 2 : 0) +
+        (GTK_TOGGLE_BUTTON(performance_assign_widgets[PP_MOD_WHEEL_ASSIGN][2])->active ? 4 : 0);
+    perf_buffer[10] = p;
+    p = (GTK_TOGGLE_BUTTON(performance_assign_widgets[PP_FOOT_ASSIGN][0])->active ? 1 : 0) +
+        (GTK_TOGGLE_BUTTON(performance_assign_widgets[PP_FOOT_ASSIGN][1])->active ? 2 : 0) +
+        (GTK_TOGGLE_BUTTON(performance_assign_widgets[PP_FOOT_ASSIGN][2])->active ? 4 : 0);
+    perf_buffer[12] = p;
+    p = (GTK_TOGGLE_BUTTON(performance_assign_widgets[PP_PRESSURE_ASSIGN][0])->active ? 1 : 0) +
+        (GTK_TOGGLE_BUTTON(performance_assign_widgets[PP_PRESSURE_ASSIGN][1])->active ? 2 : 0) +
+        (GTK_TOGGLE_BUTTON(performance_assign_widgets[PP_PRESSURE_ASSIGN][2])->active ? 4 : 0);
+    perf_buffer[14] = p;
+    p = (GTK_TOGGLE_BUTTON(performance_assign_widgets[PP_BREATH_ASSIGN][0])->active ? 1 : 0) +
+        (GTK_TOGGLE_BUTTON(performance_assign_widgets[PP_BREATH_ASSIGN][1])->active ? 2 : 0) +
+        (GTK_TOGGLE_BUTTON(performance_assign_widgets[PP_BREATH_ASSIGN][2])->active ? 4 : 0);
+    perf_buffer[16] = p;
+
+    gui_data_send_performance_buffer(perf_buffer);
+}
+
+void
+on_performance_spin_change(GtkWidget *widget, gpointer data)
+{
+    if (internal_gui_update_only) {
+        GUIDB_MESSAGE(DB_GUI, " on_performance_spin_change: skipping further action\n");
+        return;
+    }
+
+    GUIDB_MESSAGE(DB_GUI, " on_performance_spin_change: '%s' set to %d\n",
+                  performance_spin_names[(int)data],
+                  lrintf(GTK_ADJUSTMENT(widget)->value));
+
+    send_performance();
+}
+
+void
+on_performance_assign_toggled(GtkWidget *widget, gpointer data)
+{
+    if (internal_gui_update_only) {
+        GUIDB_MESSAGE(DB_GUI, " on_performance_assign_toggled: skipping further action\n");
+        return;
+    }
+
+    GUIDB_MESSAGE(DB_GUI, " on_performance_assign_toggled: '%s' now P%d A%d E%d\n",
+                  performance_assign_names[(int)data],
+                  GTK_TOGGLE_BUTTON (performance_assign_widgets[parameter][0])->active ? 1 : 0,
+                  GTK_TOGGLE_BUTTON (performance_assign_widgets[parameter][1])->active ? 1 : 0,
+                  GTK_TOGGLE_BUTTON (performance_assign_widgets[parameter][2])->active ? 1 : 0);
+
+    send_performance();
+}
+
+void
 on_test_note_slider_change(GtkWidget *widget, gpointer data)
 {
     unsigned char value = lrintf(GTK_ADJUSTMENT(widget)->value);
@@ -783,6 +851,74 @@ update_edit_buffer(const char *value)
 
         edit_buffer_active = 1;
     }
+}
+
+void
+update_performance_spin(int parameter, uint8_t value, uint8_t max)
+{
+    GtkObject *adjustment = performance_spin_adjustments[parameter];
+
+    GUIDB_MESSAGE(DB_OSC, ": update_performance_spin called for '%s' with %d\n",
+                  performance_spin_names[parameter], value);
+
+    if (value <= max) {
+
+        internal_gui_update_only = 1;
+
+        GTK_ADJUSTMENT(adjustment)->value = (float)value;
+        gtk_signal_emit_by_name (adjustment, "value_changed");  /* causes call to on_performance_spin_change callback */
+
+        internal_gui_update_only = 0;
+    }
+}
+
+void
+update_performance_assign(int parameter, uint8_t bits)
+{
+    GUIDB_MESSAGE(DB_OSC, ": update_performance_assign called for '%s' with %d\n",
+                  performance_assign_names[parameter], bits);
+
+    if (bits <= 7) {
+
+        internal_gui_update_only = 1;
+
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(performance_assign_widgets[parameter][0]),
+                                     bits & 1 ? 1 : 0); /* causes call to on_performance_assign_toggled callback */
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(performance_assign_widgets[parameter][1]),
+                                     bits & 2 ? 1 : 0); /* causes call to on_performance_assign_toggled callback */
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(performance_assign_widgets[parameter][2]),
+                                     bits & 4 ? 1 : 0); /* causes call to on_performance_assign_toggled callback */
+
+        internal_gui_update_only = 0;
+    }
+}
+
+void
+update_performance_widgets(uint8_t *performance)
+{
+    update_performance_spin(PP_PITCH_BEND_RANGE,      performance[3],  12);
+    update_performance_spin(PP_PORTAMENTO_TIME,       performance[5],  99);
+    update_performance_spin(PP_MOD_WHEEL_SENSITIVITY, performance[9],  15);
+    update_performance_spin(PP_FOOT_SENSITIVITY,      performance[11], 15);
+    update_performance_spin(PP_PRESSURE_SENSITIVITY,  performance[13], 15);
+    update_performance_spin(PP_BREATH_SENSITIVITY,    performance[15], 15);
+    update_performance_assign(PP_MOD_WHEEL_ASSIGN, performance[10]);
+    update_performance_assign(PP_FOOT_ASSIGN,      performance[12]);
+    update_performance_assign(PP_PRESSURE_ASSIGN,  performance[14]);
+    update_performance_assign(PP_BREATH_ASSIGN,    performance[16]);
+}
+
+void
+update_performance(const char *value)
+{
+    uint8_t perf_buffer[DX7_PERFORMANCE_SIZE];
+
+    if (!decode_7in6(value, DX7_PERFORMANCE_SIZE, perf_buffer)) {
+        GUIDB_MESSAGE(DB_OSC, " update_performance: corrupt data!\n");
+        return;
+    }
+
+    update_performance_widgets(perf_buffer);
 }
 
 void

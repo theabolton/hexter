@@ -1,18 +1,18 @@
 ## Process this file with automake to produce Makefile.in
 
 if BUILD_TEXTUI
-ui_PROGRAMS = hexter_text
+ui_PROGRAMS = hexter6_text
 else
-ui_PROGRAMS = hexter_gtk
+ui_PROGRAMS = hexter6_gtk
 endif
 
-uidir = $(libdir)/dssi/hexter
+uidir = $(libdir)/dssi/hexter6
 
 plugindir = $(libdir)/dssi
 
-plugin_LTLIBRARIES = hexter.la
+plugin_LTLIBRARIES = hexter6.la
 
-hexter_gtk_SOURCES = \
+hexter6_gtk_SOURCES = \
 	gui_main.c \
 	bitmap_about.xpm \
 	dx7_voice_data.c \
@@ -30,11 +30,11 @@ hexter_gtk_SOURCES = \
 	gui_midi.c \
 	gui_midi.h
 
-hexter_gtk_CFLAGS = @GTK_CFLAGS@ $(AM_CFLAGS) @ALSA_CFLAGS@
+hexter6_gtk_CFLAGS = @GTK_CFLAGS@ $(AM_CFLAGS) @ALSA_CFLAGS@
 
-hexter_gtk_LDADD = @GTK_LIBS@ @ALSA_LIBS@
+hexter6_gtk_LDADD = @GTK_LIBS@ @ALSA_LIBS@
 
-hexter_text_SOURCES = \
+hexter6_text_SOURCES = \
 	../extra/textui_main.c \
 	dx7_voice_data.c \
 	dx7_voice_data.h \
@@ -45,11 +45,11 @@ hexter_text_SOURCES = \
 	../extra/textui_callbacks.c \
 	../extra/textui_callbacks.h
 
-hexter_text_CFLAGS = $(AM_CFLAGS) @ALSA_CFLAGS@
+hexter6_text_CFLAGS = $(AM_CFLAGS) @ALSA_CFLAGS@
 
-hexter_text_LDADD = @READLINE_LIBS@ @ALSA_LIBS@
+hexter6_text_LDADD = @READLINE_LIBS@ @ALSA_LIBS@
 
-hexter_la_SOURCES = \
+hexter6_la_SOURCES = \
 	hexter.c \
         dx7_voice.c \
         dx7_voice.h \
@@ -63,7 +63,7 @@ hexter_la_SOURCES = \
 	hexter_types.h \
         hexter.h
 
-hexter_la_LIBADD = -lm
+hexter6_la_LIBADD = -lm
 
-hexter_la_LDFLAGS = -module -avoid-version
+hexter6_la_LDFLAGS = -module -avoid-version
 

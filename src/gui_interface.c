@@ -44,6 +44,8 @@ GtkWidget *sysex_channel_spin;
 GtkWidget *sysex_status_label;
 GtkWidget *sysex_discard_button;
 GtkWidget *sysex_save_button;
+GtkObject *performance_spin_adjustments[6];
+GtkWidget *performance_assign_widgets[4][3];
 
 GtkWidget *about_window;
 GtkWidget *about_label;
@@ -72,6 +74,155 @@ GtkObject *edit_save_position_spin_adj;
 GtkWidget *edit_save_position_name_label;
 
 GtkWidget *patches_clist;
+
+const char *performance_spin_names[6] = {
+    "pitch_bend_range",
+    "portamento_time",
+    "mod_wheel_sensitivity",
+    "foot_sensitivity",
+    "pressure_sensitivity",
+    "breath_sensitivity",
+};
+
+const char *performance_assign_names[4] = {
+    "mod_wheel_assign",
+    "foot_assign",
+    "pressure_assign",
+    "breath_assign"
+};
+
+void
+set_window_title(GtkWidget *window, const char *tag, const char *text)
+{
+    char *title = (char *)malloc(strlen(tag) + strlen(text) + 2);
+    sprintf(title, "%s %s", tag, text);
+    gtk_window_set_title (GTK_WINDOW (window), title);
+    free(title);
+}
+
+void
+create_performance_spin(GtkWidget *window, const char *text, GtkWidget *table,
+                        int row, int parameter, int max, int init)
+{
+    GtkWidget *label;
+    GtkObject *spin_button_adj;
+    GtkWidget *spin_button;
+
+    label = gtk_label_new (text);
+    gtk_widget_ref (label);
+    gtk_object_set_data_full (GTK_OBJECT (window), "performance label", label,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (label);
+    gtk_table_attach (GTK_TABLE (table), label, 0, 1, row, row + 1,
+                      (GtkAttachOptions) (GTK_FILL),
+                      (GtkAttachOptions) (0), 0, 0);
+    gtk_misc_set_alignment (GTK_MISC (label), 0, 0.5);
+    gtk_misc_set_padding (GTK_MISC (label), 2, 0);
+
+    spin_button_adj = gtk_adjustment_new (init, 0, max, 1, 10, 10);
+    performance_spin_adjustments[parameter] = spin_button_adj;
+    spin_button = gtk_spin_button_new (GTK_ADJUSTMENT (spin_button_adj), 1, 0);
+    gtk_widget_ref (spin_button);
+    gtk_object_set_data_full (GTK_OBJECT (main_window), "performance spin", spin_button,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (spin_button);
+    gtk_table_attach (GTK_TABLE (table), spin_button, 1, 2, row, row + 1,
+                      (GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
+                      (GtkAttachOptions) (GTK_FILL), 0, 0);
+    gtk_spin_button_set_update_policy(GTK_SPIN_BUTTON (spin_button), GTK_UPDATE_IF_VALID);
+    gtk_spin_button_set_numeric (GTK_SPIN_BUTTON (spin_button), TRUE);
+
+    gtk_signal_connect (GTK_OBJECT (spin_button_adj), "value_changed",
+                        GTK_SIGNAL_FUNC(on_performance_spin_change),
+                        (gpointer)parameter);
+}
+
+void
+create_performance_assign(GtkWidget *window, const char *text,
+                          GtkWidget *table, int row, int parameter, int initbits)
+{
+    GtkWidget *label;
+    GtkWidget *hbox;
+    GtkWidget *button;
+
+    label = gtk_label_new (text);
+    gtk_widget_ref (label);
+    gtk_object_set_data_full (GTK_OBJECT (window), "performance label", label,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (label);
+    gtk_table_attach (GTK_TABLE (table), label, 0, 1, row, row + 1,
+                      (GtkAttachOptions) (GTK_FILL),
+                      (GtkAttachOptions) (0), 0, 0);
+    gtk_misc_set_alignment (GTK_MISC (label), 0, 0.5);
+    gtk_misc_set_padding (GTK_MISC (label), 2, 0);
+
+    hbox = gtk_hbox_new (FALSE, 0);
+    gtk_widget_ref (hbox);
+    gtk_object_set_data_full (GTK_OBJECT (window), "assign hbox",
+                              hbox, (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (hbox);
+    gtk_table_attach (GTK_TABLE (table), hbox, 1, 2, row, row + 1,
+                      (GtkAttachOptions) (GTK_FILL),
+                      (GtkAttachOptions) (0), 0, 0);
+    gtk_container_set_border_width (GTK_CONTAINER (hbox), 2);
+
+    label = gtk_label_new ("P");
+    gtk_widget_ref (label);
+    gtk_object_set_data_full (GTK_OBJECT (window), "assign P label", label,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (label);
+    gtk_box_pack_start (GTK_BOX (hbox), label, FALSE, TRUE, 1);
+
+    button = gtk_check_button_new();
+    performance_assign_widgets[parameter][0] = button;
+    gtk_widget_ref (button);
+    gtk_object_set_data_full (GTK_OBJECT (window), "assign P button", button,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), initbits & 1 ? 1 : 0);
+    gtk_widget_show (button);
+    gtk_box_pack_start (GTK_BOX (hbox), button, FALSE, TRUE, 1);
+    gtk_signal_connect (GTK_OBJECT (button), "toggled",
+                        GTK_SIGNAL_FUNC (on_performance_assign_toggled),
+                        (gpointer)parameter);
+
+    label = gtk_label_new ("A");
+    gtk_widget_ref (label);
+    gtk_object_set_data_full (GTK_OBJECT (window), "assign A label", label,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (label);
+    gtk_box_pack_start (GTK_BOX (hbox), label, FALSE, TRUE, 1);
+
+    button = gtk_check_button_new();
+    performance_assign_widgets[parameter][1] = button;
+    gtk_widget_ref (button);
+    gtk_object_set_data_full (GTK_OBJECT (window), "assign A button", button,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), initbits & 2 ? 1 : 0);
+    gtk_widget_show (button);
+    gtk_box_pack_start (GTK_BOX (hbox), button, FALSE, TRUE, 1);
+    gtk_signal_connect (GTK_OBJECT (button), "toggled",
+                        GTK_SIGNAL_FUNC (on_performance_assign_toggled),
+                        (gpointer)parameter);
+
+    label = gtk_label_new ("E");
+    gtk_widget_ref (label);
+    gtk_object_set_data_full (GTK_OBJECT (window), "assign E label", label,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (label);
+    gtk_box_pack_start (GTK_BOX (hbox), label, FALSE, TRUE, 1);
+
+    button = gtk_check_button_new();
+    performance_assign_widgets[parameter][2] = button;
+    gtk_widget_ref (button);
+    gtk_object_set_data_full (GTK_OBJECT (window), "assign E button", button,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), initbits & 4 ? 1 : 0);
+    gtk_widget_show (button);
+    gtk_box_pack_start (GTK_BOX (hbox), button, FALSE, TRUE, 1);
+    gtk_signal_connect (GTK_OBJECT (button), "toggled",
+                        GTK_SIGNAL_FUNC (on_performance_assign_toggled),
+                        (gpointer)parameter);
+}
 
 void
 create_main_window (const char *tag)
@@ -130,6 +281,9 @@ create_main_window (const char *tag)
     GtkWidget *label11;
 #endif /* MIDI_ALSA */
     GtkWidget *configuration_tab_label;
+    GtkWidget *performance_frame;
+    GtkWidget *performance_table;
+    GtkWidget *performance_tab_label;
     GtkAccelGroup *accel_group;
 
     accel_group = gtk_accel_group_new ();
@@ -540,6 +694,44 @@ create_main_window (const char *tag)
     gtk_widget_show (configuration_tab_label);
     gtk_notebook_set_tab_label (GTK_NOTEBOOK (notebook1), gtk_notebook_get_nth_page (GTK_NOTEBOOK (notebook1), 1), configuration_tab_label);
 
+    /* Performance tab */
+    performance_frame = gtk_frame_new ("Global Performance Parameters");
+    gtk_widget_ref (performance_frame);
+    gtk_object_set_data_full (GTK_OBJECT (main_window), "performance_frame", performance_frame,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (performance_frame);
+    gtk_container_add (GTK_CONTAINER (notebook1), performance_frame);
+    gtk_container_set_border_width (GTK_CONTAINER (performance_frame), 5);
+
+    performance_table = gtk_table_new (2, 10, FALSE);
+    gtk_widget_ref (performance_table);
+    gtk_object_set_data_full (GTK_OBJECT (main_window), "performance_table", performance_table,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (performance_table);
+    gtk_container_add (GTK_CONTAINER (performance_frame), performance_table);
+    gtk_container_set_border_width (GTK_CONTAINER (performance_table), 2);
+    gtk_table_set_row_spacings (GTK_TABLE (performance_table), 5);
+    gtk_table_set_col_spacings (GTK_TABLE (performance_table), 5);
+
+    create_performance_spin  (main_window, "pitch bend range", performance_table, 0, PP_PITCH_BEND_RANGE, 12, 2);
+    create_performance_spin  (main_window, "portamento time",  performance_table, 1, PP_PORTAMENTO_TIME, 99, 0);
+    create_performance_spin  (main_window, "mod wheel sens.",  performance_table, 2, PP_MOD_WHEEL_SENSITIVITY, 15, 15);
+    create_performance_assign(main_window, "mod wheel assign", performance_table, 3, PP_MOD_WHEEL_ASSIGN, 0x01);
+    create_performance_spin  (main_window, "foot sensitivity", performance_table, 4, PP_FOOT_SENSITIVITY, 15, 0);
+    create_performance_assign(main_window, "foot assign",      performance_table, 5, PP_FOOT_ASSIGN, 0x04);
+    create_performance_spin  (main_window, "pressure sens.",   performance_table, 6, PP_PRESSURE_SENSITIVITY, 15, 15);
+    create_performance_assign(main_window, "pressure assign",  performance_table, 7, PP_PRESSURE_ASSIGN, 0x02);
+    create_performance_spin  (main_window, "breath sens.",     performance_table, 8, PP_BREATH_SENSITIVITY, 15, 15);
+    create_performance_assign(main_window, "breath assign",    performance_table, 9, PP_BREATH_ASSIGN, 0x02);
+
+    performance_tab_label = gtk_label_new ("Performance");
+    gtk_widget_ref (performance_tab_label);
+    gtk_object_set_data_full (GTK_OBJECT (main_window), "performance_tab_label", performance_tab_label,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (performance_tab_label);
+    gtk_notebook_set_tab_label (GTK_NOTEBOOK (notebook1), gtk_notebook_get_nth_page (GTK_NOTEBOOK (notebook1), 2), performance_tab_label);
+
+    /* Test note widgets */
     frame12 = gtk_frame_new ("Test Note");
     gtk_widget_ref (frame12);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "frame12", frame12,
@@ -801,7 +993,6 @@ create_import_file_selection (const char *tag)
 void
 create_import_file_position_window (const char *tag)
 {
-    char      *title;
     GtkWidget *vbox4;
     GtkWidget *position_text_label;
     GtkWidget *hbox2;
@@ -814,10 +1005,7 @@ create_import_file_position_window (const char *tag)
     import_file_position_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
     gtk_object_set_data (GTK_OBJECT (import_file_position_window),
                          "import_file_position_window", import_file_position_window);
-    title = (char *)malloc(strlen(tag) + 17);
-    sprintf(title, "%s Import Position", tag);
-    gtk_window_set_title (GTK_WINDOW (import_file_position_window), title);
-    free(title);
+    set_window_title(import_file_position_window, tag, "Import Position");
 
     vbox4 = gtk_vbox_new (FALSE, 0);
     gtk_widget_ref (vbox4);
@@ -918,17 +1106,13 @@ create_import_file_position_window (const char *tag)
 void
 create_notice_window (const char *tag)
 {
-    char      *title;
     GtkWidget *vbox3;
     GtkWidget *hbox1;
     GtkWidget *notice_dismiss;
 
     notice_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);  /* or GTK_WINDOW_DIALOG? */
     gtk_object_set_data (GTK_OBJECT (notice_window), "notice_window", notice_window);
-    title = (char *)malloc(strlen(tag) + 8);
-    sprintf(title, "%s Notice", tag);
-    gtk_window_set_title (GTK_WINDOW (notice_window), title);
-    free(title);
+    set_window_title(notice_window, tag, "Notice");
     gtk_window_set_position (GTK_WINDOW (notice_window), GTK_WIN_POS_MOUSE);
     gtk_window_set_modal (GTK_WINDOW (notice_window), TRUE);
 
@@ -985,7 +1169,6 @@ create_notice_window (const char *tag)
 void
 create_export_file_type_window (const char *tag)
 {
-    char      *title;
     GtkWidget *vbox1;
     GtkWidget *label1;
     GtkWidget *table1;
@@ -1006,11 +1189,7 @@ create_export_file_type_window (const char *tag)
     export_file_type_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
     gtk_object_set_data (GTK_OBJECT (export_file_type_window), "export_file_type_window",
                          export_file_type_window);
-    title = (char *)malloc(strlen(tag) + 18);
-    sprintf(title, "%s Export File Type", tag);
-    gtk_window_set_title (GTK_WINDOW (export_file_type_window), title);
-    free(title);
-    /* hmm: gtk_window_set_position?, gtk_window_set_modal? */
+    set_window_title(export_file_type_window, tag, "Export File Type");
 
     vbox1 = gtk_vbox_new (FALSE, 0);
     gtk_widget_ref (vbox1);
@@ -1268,7 +1447,6 @@ create_export_file_selection (const char *tag)
 void
 create_edit_save_position_window (const char *tag)
 {
-    char      *title;
     GtkWidget *vbox4;
     GtkWidget *hbox2;
     GtkWidget *edit_save_position_text_label;
@@ -1281,10 +1459,7 @@ create_edit_save_position_window (const char *tag)
     edit_save_position_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
     gtk_object_set_data (GTK_OBJECT (edit_save_position_window),
                          "edit_save_position_window", edit_save_position_window);
-    title = (char *)malloc(strlen(tag) + 20);
-    sprintf(title, "%s Edit Save Position", tag);
-    gtk_window_set_title (GTK_WINDOW (edit_save_position_window), title);
-    free(title);
+    set_window_title(edit_save_position_window, tag, "Edit Save Position");
 
     vbox4 = gtk_vbox_new (FALSE, 0);
     gtk_widget_ref (vbox4);

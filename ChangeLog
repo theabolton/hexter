@@ -1,3 +1,28 @@
+20070118 version 0.6.0
+
+* hexter now installs as DSSI plugin 'hexter6', with the following
+    files:
+        <prefix>/lib/dssi/hexter6/hexter6_gtk
+        <prefix>/lib/dssi/hexter6.so
+        <prefix>/lib/dssi/hexter6.la
+    This allows the venerable hexter 0.5.9 to be installed alongside
+    the still-being-polished 0.6.0 version.
+
+* Implemented the LFO, amplitude modulation and pitch modulation
+    (many thanks to Jamie Bullock)!
+
+* Added TX7-style performance parameters, allowing configuration
+    from the GUI of pitch bend range, portamento time, and
+    sensitivity and assignment of the modulation wheel, foot
+    controller, pressure (both channel and key), and breath
+    controller.
+
+* Added DX7 patchbank loading code from Martin Tarenskeen, allowing
+    hexter to load a number of additional patch file formats.
+
+* Partially implemented portamento.  For now, the curves and times
+    are wrong, but the plumbing is there.
+
 20060108 version 0.5.9
 
 * Added GUI '-test' magic host URL argument for starting GUI without

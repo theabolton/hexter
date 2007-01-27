@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004-2006 Sean Bolton and others.
+ * Copyright (C) 2004-2007 Sean Bolton and others.
  *
  * Portions of this file may have come from Chris Cannam and Steve
  * Harris's public domain DSSI example code.
@@ -170,6 +170,10 @@ osc_configure_handler(const char *path, const char *types, lo_arg **argv,
 
         update_edit_buffer(value);
 
+    } else if (!strcmp(key, "performance")) {
+
+        update_performance(value);
+
     } else if (!strcmp(key, "monophonic")) {
 
         update_monophonic(value);
@@ -287,12 +291,12 @@ main(int argc, char *argv[])
     gint osc_server_socket_tag;
     gint update_request_timeout_tag;
 
-    DSSP_DEBUG_INIT("hexter_gtk");
+    DSSP_DEBUG_INIT("hexter6_gtk");
 
 #ifdef DSSP_DEBUG
     GUIDB_MESSAGE(DB_MAIN, " starting (pid %d)...\n", getpid());
 #else
-    fprintf(stderr, "hexter_gtk starting (pid %d)...\n", getpid());
+    fprintf(stderr, "hexter6_gtk starting (pid %d)...\n", getpid());
 #endif
     /* { int i; fprintf(stderr, "args:\n"); for(i=0; i<argc; i++) printf("%d: %s\n", i, argv[i]); } // debug */
 
@@ -343,7 +347,7 @@ main(int argc, char *argv[])
 
     /* add OSC server socket to GTK+'s watched I/O */
     if (lo_server_get_socket_fd(osc_server) < 0) {
-        fprintf(stderr, "hexter_gtk fatal: OSC transport does not support exposing socket fd\n");
+        fprintf(stderr, "hexter6_gtk fatal: OSC transport does not support exposing socket fd\n");
         exit(1);
     }
     osc_server_socket_tag = gdk_input_add(lo_server_get_socket_fd(osc_server),
@@ -354,6 +358,7 @@ main(int argc, char *argv[])
     /* set up patches */
     gui_data_patches_init();
     rebuild_patches_clist();
+    update_performance_widgets(dx7_init_performance);
 
     /* schedule our update request */
     update_request_timeout_tag = gtk_timeout_add(50,

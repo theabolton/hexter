@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004 Sean Bolton and others.
+ * Copyright (C) 2004, 2006 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -62,6 +62,23 @@ extern GtkObject *edit_save_position_spin_adj;
 extern GtkWidget *edit_save_position_name_label;
 
 extern GtkWidget *patches_clist;
+
+#define PP_PITCH_BEND_RANGE       0
+#define PP_PORTAMENTO_TIME        1
+#define PP_MOD_WHEEL_SENSITIVITY  2
+#define PP_FOOT_SENSITIVITY       3
+#define PP_PRESSURE_SENSITIVITY   4
+#define PP_BREATH_SENSITIVITY     5
+
+#define PP_MOD_WHEEL_ASSIGN  0
+#define PP_FOOT_ASSIGN       1
+#define PP_PRESSURE_ASSIGN   2
+#define PP_BREATH_ASSIGN     3
+
+extern GtkObject *performance_spin_adjustments[6];
+extern GtkWidget *performance_assign_widgets[4][3];
+extern const char *performance_spin_names[6];
+extern const char *performance_assign_names[4];
 
 void create_windows(const char *instance_tag);
 

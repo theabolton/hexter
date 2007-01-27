@@ -15,11 +15,11 @@ aware of....)
 hexter operates as a plugin for the Disposable Soft Synth Interface
 (DSSI).  DSSI is a plugin API for software instruments (soft synths)
 with user interfaces, permitting them to be hosted in-process by
-Linux audio applications.  More information on DSSI can be found at:
+audio applications.  More information on DSSI can be found at:
 
   http://dssi.sourceforge.net/
 
-hexter is written by Sean Bolton, and copyright (c)2006 under the
+hexter is written by Sean Bolton, and copyright (c)2007 under the
 GNU General Public License, version 2 or later.  See the enclosed
 file COPYING for details.  While this software is 'free' within the
 requirements of this license, I (Sean) would appreciate any or all
@@ -41,8 +41,9 @@ hexter requires the following:
     - DSSI version 0.4 or greater, available from the 
         dssi.sourceforge.net address above.
 
-    - liblo version 0.12 or greater, a library implementing the Open
-        Sound Control protocol, available at:
+    - liblo version 0.12 or greater (0.23 or greater recommended), a
+        library implementing the Open Sound Control protocol,
+        available at:
 
         http://plugin.org.uk/liblo/
 
@@ -99,9 +100,9 @@ aren't particularly helpful, so try this instead:
 
 6. 'make install' will install the following:
 
-    <prefix>/lib/dssi/hexter/hexter_gtk
-    <prefix>/lib/dssi/hexter.so
-    <prefix>/lib/dssi/hexter.la
+    <prefix>/lib/dssi/hexter6/hexter6_gtk
+    <prefix>/lib/dssi/hexter6.so
+    <prefix>/lib/dssi/hexter6.la
     <prefix>/share/hexter/dx7_roms.dx7
     <prefix>/share/hexter/fb01_roms_converted_12.dx7
     <prefix>/share/hexter/fb01_roms_converted_34.dx7
@@ -120,23 +121,23 @@ in the DSSI distribution, I do the following:
 2. Start jack-dssi-host, supplying the correct plugin path
     and filename (substitute <prefix> as appropriate):
 
-    $ DSSI_PATH=<prefix>/lib/dssi sudo jack-dssi-host hexter.so
+    $ DSSI_PATH=<prefix>/lib/dssi sudo jack-dssi-host hexter6.so
 
     jack-dssi-host should start, and moments later the hexter
     graphic user interface should appear.
 
-3. Use aconnect or kaconnect to connect jack-dssi-host to a MIDI
+3. Use qjackctl or aconnect to connect jack-dssi-host to a MIDI
    source, such as vkeybd.
 
-4. Begin playing sounds!  If you get no response, try selecting the
-    'Configuration' tab in the hexter GUI, and click the 'Send Test
-    Note' button.  This sends a note directly via the host to the
-    plugin, so if you hear sound now, look for a problem between the
-    host and your MIDI source.  If you still don't hear sound, I'd
-    look for a problem between the host and your output device.  If
-    you continue having trouble, you might recompile with DSSP_DEBUG
-    bit 2 set, which will cause the plugin to continuously output a
-    quiet buzz to help debug your outgoing signal path.
+4. Begin playing sounds!  If you get no response, try clicking the
+    'Send Test Note' button in the hexter GUI.  This sends a note
+    directly via the host to the plugin, so if you hear sound now,
+    look for a problem between the host and your MIDI source.  If
+    you still don't hear sound, I'd look for a problem between the
+    host and your output device.  If you continue having trouble,
+    you might recompile with DSSP_DEBUG bit 2 set, which will cause
+    the plugin to continuously output a quiet buzz to help debug
+    your outgoing signal path.
 
 hexter starts up with a default set of sound presets, or 'patches',
 that you can select either by selecting the GUI 'Patches' tab and
@@ -145,16 +146,29 @@ your MIDI source with the appropriate program number.
 
 Patch Import/Export
 ===================
-hexter can import DX7 patch bank files in two formats:
+hexter can import DX7 patch bank files in several formats:
 
 - The standard 32-voice bulk dump sys-ex format.  These are 4104
 bytes long, and you can find a million of them by Googling for "dx7
 patches".  hexter places no restrictions on their filenames.
 
+- The standard single-voice (edit buffer) sys-ex format.  These are
+163 bytes long.
+
 - Raw packed patch data. These are 128 bytes per patch, and may
 contain any number of patches (although hexter can only load up to
-128 of them.)  These must have the filename suffix ".dx7" for hexter
-to recognize them.
+128 of them.)  Note, though, that if the file is 8192 bytes long and
+has the filename suffix ".tx7" or ".TX7", the second half of the
+file will be ignored (Dr. T TX7 format).
+
+- Standard MIDI files containing either a 32-voice bulk dump sys-ex
+message or a single voice dump sys-ex message.  If the file contains
+more than one qualifying sys-ex message, only the first will be used.
+
+- Voyetra SIDEMAN DX/TX format (9816 bytes long).
+
+- Two concatenated 32-voice bulk dump sys-ex messages (8208 bytes
+long.)
 
 You may use the "Import Patch Bank..." option in the File menu to
 import patches.  After selecting the filename, you will need to
@@ -167,8 +181,7 @@ Several patch bank files are installed with hexter in
 You may also export patch banks using the File menu "Export Patch
 Bank..." option.  You can then select which of the formats to save
 in, and what range of patches to export.  Finally, select the
-filename to which you want to save -- hexter will not (yet) supply
-the ".dx7" extension for raw patch dumps, so make sure you do.
+filename to which you want to save, and click 'Ok'.
 
 Synthesizer Configuration
 =========================
@@ -235,10 +248,39 @@ patch you wish the edit must originate in your librarian, or you
 must export it from hexter first as a file, then load it into your
 librarian from that.
 
+Performance Parameters
+======================
+The 'Performance' tab of the hexter GUI contains controls for the
+DX7/TX7 Performance Parameters:
+
+- pitch bend range: sets the response to MIDI pitch bend messages,
+    in semitones.
+
+- portamento time: sets the portamento time.  Note that as of
+    version 0.6.0, the portamento code is still unfinished.
+
+- mod wheel sensitivity: sets the depth of response to MIDI
+    modulation wheel control change messages (MIDI control change 1).
+
+- mod wheel assign: these three check boxes set which destinations
+    the modulation wheel affects: selecting 'P' routes the LFO to
+    pitch modulation (vibrato), 'A' routes the LFO to amplitude
+    modulation (tremelo or wah), and 'E' routes the modulation wheel
+    value itself to amplitude modulation.
+
+- foot sensitivity, foot assign, pressure sens., pressure assign,
+    breath sens., and breath assign: these set the sensitivity and
+    routing as described above for the foot controller (MIDI CC 4),
+    for pressure (both channel and key pressure), and for the breath
+    controller (CC 2), respectively.
+
 MIDI Controller Mapping
 =======================
-Currently, hexter responds to MIDI volume, pitch bend, and sustain
-pedal controls.  The 'coarse frequency' parameter for each operator
+In addition to the performance parameter MIDI messages mentioned
+above, hexter responds to MIDI volume (MIDI control change 39),
+sustain pedal (MIDI CC 64), and all-sounds-off, all-notes-off, and
+reset-controllers control messages (CCs 120, 123, and 121,
+respectively).  The 'coarse frequency' parameter for each operator
 can also be controlled in real time via the following MIDI control
 change mappings:
 
@@ -248,8 +290,6 @@ Control change 18 (General Purpose #3 MSB) to operator 3 FC.
 Control change 19 (General Purpose #4 MSB) to operator 4 FC.
 Control change 80 (General Purpose #5)     to operator 5 FC.
 Control change 81 (General Purpose #6)     to operator 6 FC.
-
-Other controls will be implemented soon....
 
 Frequently Asked Questions
 ==========================
@@ -263,7 +303,7 @@ Test this with e.g. 'ping foo.bar.net'. To test that the GUI itself
 works, you can start it by itself (without a DSSI host) by giving it
 the '-test' option (plus three dummy arguments), for example:
 
-    $ <prefix>/lib/dssi/hexter/hexter_gtk -test a b c
+    $ <prefix>/lib/dssi/hexter6/hexter6_gtk -test a b c
 
 Resources:
 ==========
@@ -275,6 +315,9 @@ http://www.maths.abdn.ac.uk/~bensondj/html/dx7.html
     Dave Benson's DX7 page, has much info as well as links to patch
     files.
 
-http://www.gozen.demon.co.uk/godric/synth/patches.html
-    Godric Wilkie's patch collection.
+http://www.synthzone.com/yamaha.htm
+    The Synth Zone's collection of Yamaha link, which contains quite
+    a few links to patch file collections.
+
+Anybody know where Godric Wilkie's synth pages went?
 

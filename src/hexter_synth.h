@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004 Sean Bolton and others.
+ * Copyright (C) 2004, 2006, 2007 Sean Bolton and others.
  *
  * Portions of this file may have come from Peter Hanappe's
  * Fluidsynth, copyright (C) 2003 Peter Hanappe and others.
@@ -44,6 +44,8 @@
  */
 struct _hexter_instance_t
 {
+    hexter_instance_t *next;
+
     /* output */
     LADSPA_Data    *output;
     /* input */
@@ -52,6 +54,8 @@ struct _hexter_instance_t
 
     float           sample_rate;  
     float           nugget_rate;       /* nuggets per second */
+    uint32_t        ramp_duration;     /* frames per ramp for mods and volume */
+    int32_t         dx7_eg_max_slew;   /* max op eg increment, in s7.24 units per frame */
 
     /* voice tracking */
     int             polyphony;         /* requested polyphony, must be <= HEXTER_MAX_POLYPHONY */
@@ -59,6 +63,7 @@ struct _hexter_instance_t
     int             max_voices;        /* current max polyphony, either requested polyphony above or 1 while in monophonic mode */
     int             current_voices;    /* count of currently playing voices */
     dx7_voice_t    *mono_voice;
+    unsigned char   last_key;          /* portamento starting key */
     signed char     held_keys[8];      /* for monophonic key tracking, an array of note-ons, most recently received first */
 
     /* patches and edit buffer */
@@ -73,38 +78,72 @@ struct _hexter_instance_t
     int             overlay_program;   /* program to which 'configure edit_buffer' patch applies, or -1 */
     uint8_t         overlay_patch_buffer[DX7_VOICE_SIZE_UNPACKED];  /* 'configure edit_buffer' patch */
 
+    /* global performance parameter buffer */
+    uint8_t         performance_buffer[DX7_PERFORMANCE_SIZE];
+
+    /* current performance perameters (from global buffer or current patch) */
+    uint8_t         pitch_bend_range;         /* in semitones */
+    uint8_t         portamento_time;
+    uint8_t         mod_wheel_sensitivity;
+    uint8_t         mod_wheel_assign;
+    uint8_t         foot_sensitivity;
+    uint8_t         foot_assign;
+    uint8_t         pressure_sensitivity;
+    uint8_t         pressure_assign;
+    uint8_t         breath_sensitivity;
+    uint8_t         breath_assign;
+
     /* current non-LADSPA-port-mapped controller values */
     unsigned char   key_pressure[128];
     unsigned char   cc[128];                  /* controller values */
     unsigned char   channel_pressure;
-    unsigned char   pitch_wheel_sensitivity;  /* in semitones */
     int             pitch_wheel;              /* range is -8192 - 8191 */
 
     /* translated port and controller values */
     double          fixed_freq_multiplier;
     unsigned long   cc_volume;                /* volume msb*128 + lsb, max 16256 */
-    /* float        mod_wheel; */
     double          pitch_bend;               /* frequency shift, in semitones */
+    int             mods_serial;
+    float           mod_wheel;
+    float           foot;
+    float           breath;
 
-    int32_t         dx7_eg_max_slew;          /* max op eg increment, in s7.24 units per frame */
+    uint8_t         lfo_speed;
+    uint8_t         lfo_wave;
+    uint8_t         lfo_delay;
+    int32_t         lfo_delay_value[3];
+    uint32_t        lfo_delay_duration[3];
+    int32_t         lfo_delay_increment[3];
+    int32_t         lfo_phase;
+    int32_t         lfo_value;
+    double          lfo_value_for_pitch;      /* no delay, unramped */
+    uint32_t        lfo_duration;
+    int32_t         lfo_increment;
+    int32_t         lfo_target;
+    int32_t         lfo_increment0;
+    int32_t         lfo_increment1;
+    uint32_t        lfo_duration0;
+    uint32_t        lfo_duration1;
+    int32_t         lfo_buffer[HEXTER_NUGGET_SIZE];
 };
 
 /*
  * hexter_synth_t
  */
 struct _hexter_synth_t {
-    int             initialized;
-    int             instance_count;
+    int                initialized;
+    int                instance_count;
+    hexter_instance_t *instances;
 
-    pthread_mutex_t mutex;
-    int             mutex_grab_failed;
+    pthread_mutex_t    mutex;
+    int                mutex_grab_failed;
 
-    unsigned long   nugget_remains;
+    unsigned long      nugget_remains;
 
-    unsigned int    note_id;           /* incremented for every new note, used for voice-stealing prioritization */
-    int             global_polyphony;  /* must be <= HEXTER_MAX_POLYPHONY */
+    unsigned int       note_id;           /* incremented for every new note, used for voice-stealing prioritization */
+    int                global_polyphony;  /* must be <= HEXTER_MAX_POLYPHONY */
 
-    dx7_voice_t    *voice[HEXTER_MAX_POLYPHONY];
+    dx7_voice_t       *voice[HEXTER_MAX_POLYPHONY];
 };
 
 /* hexter_synth.c */
@@ -120,13 +159,13 @@ void  hexter_instance_note_on(hexter_instance_t *instance, unsigned char key,
 void  hexter_instance_key_pressure(hexter_instance_t *instance,
                                    unsigned char key, unsigned char pressure);
 void  hexter_instance_damp_voices(hexter_instance_t *instance);
-void  hexter_instance_update_wheel_mod(hexter_instance_t *instance);
 void  hexter_instance_control_change(hexter_instance_t *instance,
                                      unsigned int param, signed int value);
 void  hexter_instance_channel_pressure(hexter_instance_t *instance,
                                        signed int pressure);
 void  hexter_instance_pitch_bend(hexter_instance_t *instance, signed int value);
 void  hexter_instance_init_controls(hexter_instance_t *instance);
+void  hexter_instance_set_performance_data(hexter_instance_t *instance);
 void  hexter_instance_select_program(hexter_instance_t *instance,
                                      unsigned long bank, unsigned long program);
 int   hexter_instance_set_program_descriptor(hexter_instance_t *instance,
@@ -142,20 +181,28 @@ char *hexter_instance_handle_monophonic(hexter_instance_t *instance,
 char *hexter_instance_handle_polyphony(hexter_instance_t *instance,
                                        const char *value);
 char *hexter_synth_handle_global_polyphony(const char *value);
+char *hexter_instance_handle_performance(hexter_instance_t *instance,
+                                         const char *value);
 void  hexter_synth_render_voices(unsigned long samples_done,
                                  unsigned long sample_count, 
                                  int do_control_update);
 
 /* these come right out of alsa/asoundef.h */
 #define MIDI_CTL_MSB_MODWHEEL           0x01    /**< Modulation */
+#define MIDI_CTL_MSB_BREATH           	0x02	/**< Breath */
+#define MIDI_CTL_MSB_FOOT             	0x04	/**< Foot */
+/* -FIX- support 5 portamento time */
 #define MIDI_CTL_MSB_MAIN_VOLUME        0x07    /**< Main volume */
 #define MIDI_CTL_MSB_GENERAL_PURPOSE1   0x10    /**< General purpose 1 */
 #define MIDI_CTL_MSB_GENERAL_PURPOSE2   0x11    /**< General purpose 2 */
 #define MIDI_CTL_MSB_GENERAL_PURPOSE3   0x12    /**< General purpose 3 */
 #define MIDI_CTL_MSB_GENERAL_PURPOSE4   0x13    /**< General purpose 4 */
 #define MIDI_CTL_LSB_MODWHEEL           0x21    /**< Modulation */
+#define MIDI_CTL_LSB_BREATH           	0x22	/**< Breath */
+#define MIDI_CTL_LSB_FOOT             	0x24	/**< Foot */
 #define MIDI_CTL_LSB_MAIN_VOLUME        0x27    /**< Main volume */
 #define MIDI_CTL_SUSTAIN                0x40    /**< Sustain pedal */
+/* -FIX- support 65(?) portamento switch */
 #define MIDI_CTL_GENERAL_PURPOSE5       0x50    /**< General purpose 5 */
 #define MIDI_CTL_GENERAL_PURPOSE6       0x51    /**< General purpose 6 */
 #define MIDI_CTL_ALL_SOUNDS_OFF         0x78    /**< All sounds off */

@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004 Sean Bolton and others.
+ * Copyright (C) 2004, 2006, 2007 Sean Bolton and others.
  *
  * Portions of this file may have come from Peter Hanappe's
  * Fluidsynth, copyright (C) 2003 Peter Hanappe and others.
@@ -52,6 +52,12 @@ struct _dx7_patch_t
 #define FLOAT_TO_FP(x)  lrintf((x) * (float)FP_SIZE)
 #define DOUBLE_TO_FP(x) lrint((x) * (double)FP_SIZE)
 
+static inline int32_t
+fp_multiply(int32_t a, int32_t b)
+{
+    return ((int64_t)a * (int64_t)b) >> FP_SHIFT;
+}
+
 enum dx7_eg_mode {
     DX7_EG_FINISHED,
     DX7_EG_RUNNING,
@@ -84,8 +90,17 @@ struct _dx7_pitch_eg_t   /* pitch envelope generator */
 
     int        mode;        /* enum dx7_eg_mode (finished, running, sustaining, constant) */
     int        phase;       /* 0, 1, 2, or 3 */
-    double     value;
+    double     value;       /* in semitones, zero when level is 50 */
     int32_t    duration;    /* pitch envelope durations are in bursts ('nuggets') */
+    double     increment;
+    double     target;
+};
+
+struct _dx7_portamento_t  /* portamento generator */
+{
+    int        segment;    /* ... 3, 2, 1, or 0 */
+    double     value;      /* in semitones, zero is destination pitch */
+    int32_t    duration;   /* portamento segments are in bursts */
     double     increment;
     double     target;
 };
@@ -115,12 +130,20 @@ struct _dx7_op_t   /* operator */
     uint8_t     level_scaling_l_curve;
     uint8_t     level_scaling_r_curve;
     uint8_t     rate_scaling;
+    uint8_t     amp_mod_sens;
     uint8_t     velocity_sens;
     uint8_t     output_level;
     uint8_t     osc_mode;
     uint8_t     coarse;
     uint8_t     fine;
     uint8_t     detune;
+};
+
+enum dx7_lfo_status
+{
+    DX7_LFO_DELAY,
+    DX7_LFO_FADEIN,
+    DX7_LFO_ON
 };
 
 enum dx7_voice_status
@@ -138,33 +161,64 @@ struct _dx7_voice_t
 {
     hexter_instance_t *instance;
 
-    unsigned int   note_id;
+    unsigned int     note_id;
 
-    unsigned char  status;
-    unsigned char  key;
-    unsigned char  velocity;
-    unsigned char  rvelocity;   /* the note-off velocity */
+    unsigned char    status;
+    unsigned char    key;
+    unsigned char    velocity;
+    unsigned char    rvelocity;   /* the note-off velocity */
 
     /* persistent voice state */
-    dx7_op_t       op[MAX_DX7_OPERATORS];
+    dx7_op_t         op[MAX_DX7_OPERATORS];
 
-    dx7_pitch_eg_t pitch_eg;
-    double         last_pitch;
-    float          last_port_tuning;
+    double           last_pitch;
+    dx7_pitch_eg_t   pitch_eg;
+    dx7_portamento_t portamento;
+    float            last_port_tuning;
+    double           pitch_mod_depth_pmd;
+    double           pitch_mod_depth_mods;
 
-    uint8_t        algorithm;
-    int32_t        feedback;
-    int32_t        feedback_multiplier;
-    uint8_t        osc_key_sync;
+    uint8_t          algorithm;
+    int32_t          feedback;
+    int32_t          feedback_multiplier;
+    uint8_t          osc_key_sync;
 
-    int            transpose;
+    uint8_t          lfo_speed;
+    uint8_t          lfo_delay;
+    uint8_t          lfo_pmd;
+    uint8_t          lfo_amd;
+    uint8_t          lfo_key_sync;
+    uint8_t          lfo_wave;
+    uint8_t          lfo_pms;
 
-    float          last_port_volume;
-    unsigned long  last_cc_volume;
-    float          volume_value;
-    float          volume_target;
-    float          volume_delta;
-    unsigned long  volume_count;
+    int              transpose;
+
+    /* modulation */
+    int              mods_serial;
+    int32_t          amp_mod_env_value;
+    unsigned long    amp_mod_env_duration;
+    int32_t          amp_mod_env_increment;
+    int32_t          amp_mod_env_target;
+    int32_t          amp_mod_lfo_mods_value;
+    unsigned long    amp_mod_lfo_mods_duration;
+    int32_t          amp_mod_lfo_mods_increment;
+    int32_t          amp_mod_lfo_mods_target;
+    int32_t          amp_mod_lfo_amd_value;
+    unsigned long    amp_mod_lfo_amd_duration;
+    int32_t          amp_mod_lfo_amd_increment;
+    int32_t          amp_mod_lfo_amd_target;
+    int              lfo_delay_segment;
+    int32_t          lfo_delay_value;
+    unsigned long    lfo_delay_duration;
+    int32_t          lfo_delay_increment;
+
+    /* volume */
+    float            last_port_volume;
+    unsigned long    last_cc_volume;
+    float            volume_value;
+    unsigned long    volume_duration;
+    float            volume_increment;
+    float            volume_target;
 };
 
 #define _PLAYING(voice)    ((voice)->status != DX7_VOICE_OFF)
@@ -173,20 +227,24 @@ struct _dx7_voice_t
 #define _RELEASED(voice)   ((voice)->status == DX7_VOICE_RELEASED)
 #define _AVAILABLE(voice)  ((voice)->status == DX7_VOICE_OFF)
 
-extern int32_t dx7_voice_sin_table[SINE_SIZE + 1];
+extern int32_t  dx7_voice_sin_table[SINE_SIZE + 1];
 
-extern uint8_t dx7_voice_carriers[32];
-extern float   dx7_voice_carrier_count[32];
+extern uint8_t  dx7_voice_carriers[32];
+extern float    dx7_voice_carrier_count[32];
 
-extern float   dx7_voice_eg_rate_rise_duration[128];
-extern float   dx7_voice_eg_rate_decay_duration[128];
-extern float   dx7_voice_eg_rate_rise_percent[128];
-extern float   dx7_voice_eg_rate_decay_percent[128];
+extern float    dx7_voice_eg_rate_rise_duration[128];
+extern float    dx7_voice_eg_rate_decay_duration[128];
+extern float    dx7_voice_eg_rate_rise_percent[128];
+extern float    dx7_voice_eg_rate_decay_percent[128];
 
-extern int32_t dx7_voice_eg_ol_to_mod_index[129];
-extern int32_t dx7_voice_eg_ol_to_amp[129];
-extern float   dx7_voice_velocity_ol_adjustment[128];
-extern double  dx7_voice_pitch_level_to_shift[128];
+extern int32_t *dx7_voice_eg_ol_to_mod_index;
+extern int32_t *dx7_voice_eg_ol_to_amp;
+extern float    dx7_voice_velocity_ol_adjustment[128];
+extern double   dx7_voice_pitch_level_to_shift[128];
+extern float    dx7_voice_lfo_frequency[128];
+extern float    dx7_voice_pms_to_semitones[8];
+extern float    dx7_voice_amd_to_ol_adjustment[100];
+extern float    dx7_voice_mss_to_ol_adjustment[16];
 
 /* dx7_voice.c */
 dx7_voice_t *dx7_voice_new(void);
@@ -202,6 +260,7 @@ void    dx7_op_eg_set_phase(hexter_instance_t *instance, dx7_op_eg_t *eg,
                             int phase);
 void    dx7_op_envelope_prepare(hexter_instance_t *instance, dx7_op_t *op,
                                 int transposed_note, int velocity);
+void    dx7_eg_init_constants(hexter_instance_t *instance);
 void    dx7_pitch_eg_set_increment(hexter_instance_t *instance,
                                    dx7_pitch_eg_t *eg, int new_rate,
                                    int new_level);
@@ -211,7 +270,10 @@ void    dx7_pitch_eg_set_phase(hexter_instance_t *instance, dx7_pitch_eg_t *eg,
                                int phase);
 void    dx7_pitch_envelope_prepare(hexter_instance_t *instance,
                                    dx7_voice_t *voice);
-void    dx7_eg_init_constants(hexter_instance_t *instance);
+void    dx7_portamento_set_segment(hexter_instance_t *instance,
+                                   dx7_portamento_t *port);
+void    dx7_portamento_prepare(hexter_instance_t *instance,
+                               dx7_voice_t *voice);
 void    dx7_op_recalculate_increment(hexter_instance_t *instance, dx7_op_t *op);
 double  dx7_voice_recalculate_frequency(hexter_instance_t *instance,
                                         dx7_voice_t *voice);
@@ -219,14 +281,16 @@ void    dx7_voice_recalculate_freq_and_inc(hexter_instance_t *instance,
                                            dx7_voice_t *voice);
 void    dx7_voice_recalculate_volume(hexter_instance_t *instance,
                                      dx7_voice_t *voice);
+void    dx7_lfo_reset(hexter_instance_t *instance);
+void    dx7_lfo_set(hexter_instance_t *instance, dx7_voice_t *voice);
+void    dx7_lfo_update(hexter_instance_t *instance,
+                       unsigned long sample_count);
+void    dx7_voice_update_mod_depths(hexter_instance_t *instance,
+                                    dx7_voice_t* voice);
 void    dx7_voice_calculate_runtime_parameters(hexter_instance_t *instance,
                                                dx7_voice_t *voice);
 void    dx7_voice_setup_note(hexter_instance_t *instance, dx7_voice_t *voice);
 void    dx7_voice_set_data(hexter_instance_t *instance, dx7_voice_t *voice);
-void    dx7_voice_update_pressure_mod(hexter_instance_t *instance,
-                                      dx7_voice_t *voice);
-void    dx7_voice_update_pitch_bend(hexter_instance_t *instance,
-                                    dx7_voice_t *voice);
 
 /* dx7_voice_render.c */
 void    dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,

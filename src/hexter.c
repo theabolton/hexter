@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004-2005 Sean Bolton and others.
+ * Copyright (C) 2004-2007 Sean Bolton and others.
  *
  * Portions of this file may have come from Peter Hanappe's
  * Fluidsynth, copyright (C) 2003 Peter Hanappe and others.
@@ -105,6 +105,7 @@ hexter_instantiate(const LADSPA_Descriptor *descriptor,
     if (!hexter_synth.initialized) {
 
         hexter_synth.instance_count = 0;
+        hexter_synth.instances = NULL;
         hexter_synth.nugget_remains = 0;
         hexter_synth.note_id = 0;
         hexter_synth.global_polyphony = HEXTER_DEFAULT_POLYPHONY;
@@ -126,6 +127,9 @@ hexter_instantiate(const LADSPA_Descriptor *descriptor,
         hexter_cleanup(NULL);
         return NULL;
     }
+    instance->next = hexter_synth.instances;
+    hexter_synth.instances = instance;
+    hexter_synth.instance_count++;
 
     /* do any per-instance one-time initialization here */
     pthread_mutex_init(&instance->patches_mutex, NULL);
@@ -143,12 +147,14 @@ hexter_instantiate(const LADSPA_Descriptor *descriptor,
     instance->monophonic = DSSP_MONO_MODE_OFF;
     instance->max_voices = instance->polyphony;
     instance->current_voices = 0;
+    instance->last_key = 0;
     instance->pending_program_change = -1;
     instance->current_program = 0;
     instance->overlay_program = -1;
+    hexter_data_performance_init(instance->performance_buffer);
     hexter_data_patches_init(instance->patches);
-    hexter_instance_init_controls(instance);
     hexter_instance_select_program(instance, 0, 0);
+    hexter_instance_init_controls(instance);
 
     return (LADSPA_Handle)instance;
 }
@@ -184,6 +190,7 @@ hexter_activate(LADSPA_Handle handle)
 
     hexter_instance_all_voices_off(instance);  /* stop all sounds immediately */
     instance->current_voices = 0;
+    dx7_lfo_reset(instance);
 }
 
 /*
@@ -230,11 +237,24 @@ hexter_cleanup(LADSPA_Handle handle)
     int i;
 
     if (instance) {
+        hexter_instance_t *inst, *prev;
+
         hexter_deactivate(instance);
 
         if (instance->patches) free(instance->patches);
         free(instance);
 
+        prev = NULL;
+        for (inst = hexter_synth.instances; inst; inst = inst->next) {
+            if (inst == instance) {
+                if (prev)
+                    prev->next = inst->next;
+                else
+                    hexter_synth.instances = inst->next;
+                break;
+            }
+            prev = inst;
+        }
         hexter_synth.instance_count--;
     }
 
@@ -271,6 +291,10 @@ hexter_configure(LADSPA_Handle handle, const char *key, const char *value)
     } else if (!strcmp(key, "edit_buffer")) {
 
         return hexter_instance_handle_edit_buffer(instance, value);
+
+    } else if (!strcmp(key, "performance")) {  /* global performance parameters */
+
+        return hexter_instance_handle_performance(instance, value);
 
     } else if (!strcmp(key, "monophonic")) {
 
@@ -568,7 +592,7 @@ void _init()
     LADSPA_PortDescriptor *port_descriptors;
     LADSPA_PortRangeHint *port_range_hints;
 
-    DSSP_DEBUG_INIT("hexter.so");
+    DSSP_DEBUG_INIT("hexter6.so");
 
     hexter_synth.initialized = 0;
     pthread_mutex_init(&hexter_synth.mutex, NULL);
@@ -579,10 +603,10 @@ void _init()
     hexter_LADSPA_descriptor =
         (LADSPA_Descriptor *) malloc(sizeof(LADSPA_Descriptor));
     if (hexter_LADSPA_descriptor) {
-        hexter_LADSPA_descriptor->UniqueID = 2183;
-        hexter_LADSPA_descriptor->Label = "hexter";
+        hexter_LADSPA_descriptor->UniqueID = 2188;
+        hexter_LADSPA_descriptor->Label = "hexter6";
         hexter_LADSPA_descriptor->Properties = 0;
-        hexter_LADSPA_descriptor->Name = "hexter DX7 emulation (DSSI plugin v" VERSION ")";
+        hexter_LADSPA_descriptor->Name = "hexter DX7 emulation (v" VERSION ")";
         hexter_LADSPA_descriptor->Maker = "Sean Bolton <musound AT jps DOT net>";
         hexter_LADSPA_descriptor->Copyright = "GNU General Public License version 2 or later";
         hexter_LADSPA_descriptor->PortCount = HEXTER_PORTS_COUNT;

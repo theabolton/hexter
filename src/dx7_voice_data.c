@@ -1,6 +1,8 @@
 /* hexter DSSI software synthesizer plugin and GUI
  *
- * Copyright (C) 2004 Sean Bolton and others.
+ * Copyright (C) 2004-2006 Sean Bolton and others.
+ *
+ * DX7 patchbank loading code by Martin Tarenskeen.
  *
  * Portions of this file may have come from Peter Hanappe's
  * Fluidsynth, copyright (C) 2003 Peter Hanappe and others.
@@ -52,6 +54,17 @@ dx7_patch_t dx7_voice_init_voice = {
     0x63, 0x63, 0x32, 0x32, 0x32, 0x32, 0x00, 0x08,
     0x23, 0x00, 0x00, 0x00, 0x31, 0x18, 0x20, 0x20,
     0x20, 0x7F, 0x2D, 0x2D, 0x7E, 0x20, 0x20, 0x20  }
+};
+
+uint8_t dx7_init_performance[DX7_PERFORMANCE_SIZE] = {
+    0,  0, 0, 2, 0,  0, 0,  0,
+    0, 15, 1, 0, 4, 15, 2, 15,
+    2,  0, 0, 0, 0,  0, 0,  0,
+    0,  0, 0, 0, 0,  0, 0,  0,
+    0,  0, 0, 0, 0,  0, 0,  0,
+    0,  0, 0, 0, 0,  0, 0,  0,
+    0,  0, 0, 0, 0,  0, 0,  0,
+    0,  0, 0, 0, 0,  0, 0,  0
 };
 
 char base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -196,6 +209,50 @@ dx7_patch_unpack(dx7_patch_t *packed_patch, uint8_t number, uint8_t *unpacked_pa
     }
 }
 
+/*
+ * dx7_patch_pack
+ */
+void
+dx7_patch_pack(uint8_t *unpacked_patch, dx7_patch_t *packed_patch, uint8_t number)
+{
+    uint8_t *up = unpacked_patch,
+            *pp = (uint8_t *)(&packed_patch[number]);
+    int     i, j;
+
+    /* ugly because it used to be 68000 assembly... */
+    for (i = 6; i > 0; i--) {
+        for (j = 11; j > 0; j--) {
+            *pp++ = *up++;
+        }                           /* through rd */
+        *pp++ = ((*up) & 0x03) | (((*(up + 1)) & 0x03) << 2);
+        up += 2;                    /* rc+lc */
+        *pp++ = ((*up) & 0x07) | (((*(up + 7)) & 0x0f) << 3);
+        up++;                       /* pd+rs */
+        *pp++ = ((*up) & 0x03) | (((*(up + 1)) & 0x07) << 2);
+        up += 2;                    /* kvs+ams */
+        *pp++ = *up++;              /* ol */
+        *pp++ = ((*up) & 0x01) | (((*(up + 1)) & 0x1f) << 1);
+        up += 2;                    /* fc+m */
+        *pp++ = *up;
+        up += 2;                    /* ff */
+    }                               /* operator done */
+    for (i = 9; i > 0; i--) {
+        *pp++ = *up++;
+    }                               /* through algorithm */
+    *pp++ = ((*up) & 0x07) | (((*(up + 1)) & 0x01) << 3);
+    up += 2;                        /* oks+fb */
+    for (i = 4; i > 0; i--) {
+        *pp++ = *up++;
+    }                               /* through lamd */
+    *pp++ = ((*up) & 0x01) |
+            (((*(up + 1)) & 0x07) << 1) |
+            (((*(up + 2)) & 0x07) << 4);
+    up += 3;                        /* lpms+lfw+lks */
+    for (i = 11; i > 0; i--) {
+        *pp++ = *up++;
+    }                               /* through name */
+}
+
 /* ==== patch load and save ==== */
 
 /*
@@ -238,6 +295,9 @@ dx7_patchbank_load(const char *filename, dx7_patch_t *firstpatch,
     unsigned char *raw_patch_data = NULL;
     size_t filename_length;
     int count;
+    int patchstart;
+    int midshift;
+    int datastart;
 
     /* this needs to 1) open and parse the file, 2a) if it's good, copy up
      * to maxpatches patches beginning at firstpath, and not touch errmsg,
@@ -264,6 +324,10 @@ dx7_patchbank_load(const char *filename, dx7_patch_t *firstpatch,
         if (errmsg) *errmsg = strdup("patch file is too large");
         fclose(fp);
         return 0;
+    } else if (filelength < 128) {
+        if (errmsg) *errmsg = strdup ("patch file is too small");
+        fclose (fp);
+        return 0;
     }
 
     if (!(raw_patch_data = (unsigned char *)malloc(filelength))) {
@@ -280,57 +344,88 @@ dx7_patchbank_load(const char *filename, dx7_patch_t *firstpatch,
     }
     fclose(fp);
 
-    /* figure out what kind of file it is */
-    filename_length = strlen(filename);
-    if (filename_length > 4 &&
-               !strcmp(filename + filename_length - 4, ".dx7") &&
-               filelength % DX7_VOICE_SIZE_PACKED == 0) {  /* It's a raw DX7 patch bank */
+    /* check if the file is a standard MIDI file */
+    if (raw_patch_data[0] == 0x4d &&	/* "M" */
+        raw_patch_data[1] == 0x54 &&	/* "T" */
+        raw_patch_data[2] == 0x68 &&	/* "h" */
+        raw_patch_data[3] == 0x64)	/* "d" */
+        midshift = 2;
+    else
+        midshift = 0;
 
-        count = filelength / DX7_VOICE_SIZE_PACKED;
-        if (count > maxpatches)
-            count = maxpatches;
-        memcpy(firstpatch, raw_patch_data, count * DX7_VOICE_SIZE_PACKED);
-
-    } else if (filelength > 6 &&
-               raw_patch_data[0] == 0xf0 &&
-               raw_patch_data[1] == 0x43 &&
-               (raw_patch_data[2] & 0xf0) == 0x00 &&
-               raw_patch_data[3] == 0x09 &&
-               (raw_patch_data[4] == 0x10 || raw_patch_data[4] == 0x20) &&  /* 0x10 is actual, 0x20 matches typo in manual */
-               raw_patch_data[5] == 0x00) {  /* It's a DX7 sys-ex 32 voice dump */
-
-        if (filelength != DX7_DUMP_SIZE_BULK ||
-            raw_patch_data[DX7_DUMP_SIZE_BULK - 1] != 0xf7) {
-
-            if (errmsg) *errmsg = strdup("badly formatted DX7 32 voice dump!");
-            count = 0;
-
-#ifdef CHECKSUM_PATCH_FILES_ON_LOAD
-        } else if (dx7_bulk_dump_checksum(&raw_patch_data[6],
-                                          DX7_VOICE_SIZE_PACKED * 32) !=
-                   raw_patch_data[DX7_DUMP_SIZE_BULK - 2]) {
-
-            if (errmsg) *errmsg = strdup("DX7 32 voice dump with bad checksum!");
-            count = 0;
-
-#endif
-        } else {
+    /* scan SysEx or MIDI file for SysEx header */
+    count = 0;
+    datastart = 0;
+    for (patchstart = 0; patchstart + midshift + 5 < filelength; patchstart++) {
+        
+        if (raw_patch_data[patchstart] == 0xf0 &&
+            raw_patch_data[patchstart + 1 + midshift] == 0x43 &&
+            raw_patch_data[patchstart + 2 + midshift] <= 0x0f &&
+            raw_patch_data[patchstart + 3 + midshift] == 0x09 &&
+            raw_patch_data[patchstart + 5 + midshift] == 0x00 &&
+            patchstart + 4103 + midshift < filelength &&
+            raw_patch_data[patchstart + 4103 + midshift] == 0xf7) {  /* DX7 32 voice dump */
 
             count = 32;
-            if (count > maxpatches)
-                count = maxpatches;
-            memcpy(firstpatch, raw_patch_data + 6, count * DX7_VOICE_SIZE_PACKED);
+            datastart = patchstart + 6 + midshift;
+            break;
 
+        } else if (raw_patch_data[patchstart] == 0xf0 && 
+                   raw_patch_data[patchstart + midshift + 1] == 0x43 && 
+                   raw_patch_data[patchstart + midshift + 2] <= 0x0f && 
+                   raw_patch_data[patchstart + midshift + 4] == 0x01 && 
+                   raw_patch_data[patchstart + midshift + 5] == 0x1b &&
+                   patchstart + midshift + 162 < filelength &&
+                   raw_patch_data[patchstart + midshift + 162] == 0xf7) {  /* DX7 single voice (edit buffer) dump */
+
+            dx7_patch_pack(raw_patch_data + patchstart + midshift + 6,
+                           (dx7_patch_t *)raw_patch_data, 0);
+            datastart = 0;
+            count = 1;
+            break;
         }
-    } else {
+    }
+            
+    /* assume raw DX7/TX7 data if no SysEx header was found. */
+    /* assume the user knows what he is doing ;-) */
 
-        /* unsuccessful load */
-        if (errmsg) *errmsg = strdup("unknown patch bank file format!");
-        count = 0;
+    if (count == 0)
+        count = filelength / 128;
 
+    /* Dr.T TX7 file needs special treatment */
+    filename_length = strlen (filename);
+    if ((!strcmp(filename + filename_length - 4, ".TX7") ||
+         !strcmp(filename + filename_length - 4, ".tx7")) && filelength == 8192) {
+
+        count = 32;
+        filelength = 4096;
     }
 
-    free(raw_patch_data);
+    /* Voyetra SIDEMAN DX/TX */
+    if (filelength == 9816 &&
+        raw_patch_data[0] == 0xdf &&
+        raw_patch_data[1] == 0x05 &&
+        raw_patch_data[2] == 0x01 && raw_patch_data[3] == 0x00) {
+
+        count = 32;
+        datastart = 0x60f;
+    }
+
+    /* Double SySex bank */
+    if (filelength == 8208 &&
+        raw_patch_data[4104] == 0xf0 && raw_patch_data[4104 + 4103] == 0xf7) {
+
+        memcpy(raw_patch_data + 4102, raw_patch_data + 4110, 4096);
+        count = 64;
+        datastart = 6;
+    }
+
+    /* finally, copy patchdata to the right location */
+    if (count > maxpatches)
+        count = maxpatches;
+
+    memcpy(firstpatch, raw_patch_data + datastart, 128 * count);
+    free (raw_patch_data);
     return count;
 }
 
@@ -350,5 +445,16 @@ hexter_data_patches_init(dx7_patch_t *patches)
     for (i = friendly_patch_count; i < 128; i++) {
         memcpy(&patches[i], &dx7_voice_init_voice, sizeof(dx7_patch_t));
     }
+}
+
+/*
+ * hexter_data_performance_init
+ *
+ * initialize the global performance parameters.
+ */
+void
+hexter_data_performance_init(uint8_t *performance)
+{
+    memcpy(performance, &dx7_init_performance, DX7_PERFORMANCE_SIZE);
 }
 
