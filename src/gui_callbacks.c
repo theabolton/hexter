@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004-2006 Sean Bolton and others.
+ * Copyright (C) 2004-2007 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -445,6 +445,24 @@ on_mono_mode_activate(GtkWidget *widget, gpointer data)
     lo_send(osc_host_address, osc_configure_path, "ss", "monophonic", mode);
 }
 
+void
+on_compat059_toggled(GtkWidget *widget, gpointer data)
+{
+    int state = GTK_TOGGLE_BUTTON (widget)->active;
+
+    gtk_widget_set_sensitive (performance_frame, !state);
+
+    if (internal_gui_update_only) {
+        /* GUIDB_MESSAGE(DB_GUI, " on_compat059_toggled: skipping further action\n"); */
+        return;
+    }
+
+    GUIDB_MESSAGE(DB_GUI, " on_compat059_toggled: button now %s\n",
+                  (state ? "on" : "off"));
+
+    send_performance();
+}
+
 #ifdef MIDI_ALSA
 void
 on_sysex_receipt(unsigned int length, unsigned char* data)
@@ -603,6 +621,8 @@ send_performance(void)
     uint8_t p;
 
     memcpy(perf_buffer, dx7_init_performance, DX7_PERFORMANCE_SIZE);
+
+    perf_buffer[0]  = (GTK_TOGGLE_BUTTON (compat059_button)->active) ? 1 : 0;  /* 0.5.9 compatibility */
 
     perf_buffer[3]  = lrintf(GTK_ADJUSTMENT(performance_spin_adjustments[PP_PITCH_BEND_RANGE])->value);
     perf_buffer[5]  = lrintf(GTK_ADJUSTMENT(performance_spin_adjustments[PP_PORTAMENTO_TIME])->value);
@@ -906,6 +926,12 @@ update_performance_widgets(uint8_t *performance)
     update_performance_assign(PP_FOOT_ASSIGN,      performance[12]);
     update_performance_assign(PP_PRESSURE_ASSIGN,  performance[14]);
     update_performance_assign(PP_BREATH_ASSIGN,    performance[16]);
+
+    /* 0.5.9 compatibility */
+    internal_gui_update_only = 1;
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(compat059_button),
+                                 performance[0] & 0x01);  /* causes call to on_compat059_toggled callback */
+    internal_gui_update_only = 0;
 }
 
 void

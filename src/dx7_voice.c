@@ -1232,6 +1232,7 @@ void
 dx7_voice_set_data(hexter_instance_t *instance, dx7_voice_t *voice)
 {
     uint8_t *edit_buffer = instance->current_patch_buffer;
+    int compat059 = (instance->performance_buffer[0] & 0x01);  /* 0.5.9 compatibility */
     int i, j;
     double aux_feedbk;
 
@@ -1251,7 +1252,7 @@ dx7_voice_set_data(hexter_instance_t *instance, dx7_voice_t *voice)
         voice->op[i].level_scaling_l_curve = eb_op[11] & 0x03;
         voice->op[i].level_scaling_r_curve = eb_op[12] & 0x03;
         voice->op[i].rate_scaling          = eb_op[13] & 0x07;
-        voice->op[i].amp_mod_sens          = eb_op[14] & 0x03;
+        voice->op[i].amp_mod_sens          = (compat059 ? 0 : eb_op[14] & 0x03);
         voice->op[i].velocity_sens         = eb_op[15] & 0x07;
 
         for (j = 0; j < 4; j++) {
@@ -1281,7 +1282,7 @@ dx7_voice_set_data(hexter_instance_t *instance, dx7_voice_t *voice)
     voice->lfo_amd      = limit(edit_buffer[140], 0, 99);
     voice->lfo_key_sync = edit_buffer[141] & 0x01;
     voice->lfo_wave     = limit(edit_buffer[142], 0, 5);
-    voice->lfo_pms      = edit_buffer[143] & 0x07;
+    voice->lfo_pms      = (compat059 ? 0 : edit_buffer[143] & 0x07);
 
     voice->transpose = limit(edit_buffer[144], 0, 48);
 }

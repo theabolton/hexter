@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004-2006 Sean Bolton and others.
+ * Copyright (C) 2004-2007 Sean Bolton and others.
  *
  * Portions of this file may have come from Chris Cannam and Steve
  * Harris's public domain DSSI example code.
@@ -45,9 +45,9 @@
 
 #include <stdio.h>
 #define DSSP_DEBUG_INIT(x)
-#define DEBUG_MESSAGE(type, fmt...) { if (DSSP_DEBUG & type) fprintf(stderr, "hexter6.so" fmt); }
-#define GUIDB_MESSAGE(type, fmt...) { if (DSSP_DEBUG & type) fprintf(stderr, "hexter6_gtk" fmt); }
-#define TUIDB_MESSAGE(type, fmt...) { if (DSSP_DEBUG & type) printf("hexter6_text" fmt); }
+#define DEBUG_MESSAGE(type, fmt...) { if (DSSP_DEBUG & type) fprintf(stderr, "hexter.so" fmt); }
+#define GUIDB_MESSAGE(type, fmt...) { if (DSSP_DEBUG & type) fprintf(stderr, "hexter_gtk" fmt); }
+#define TUIDB_MESSAGE(type, fmt...) { if (DSSP_DEBUG & type) printf("hexter_text" fmt); }
 // -FIX-:
 // #include "message_buffer.h"
 // #define DSSP_DEBUG_INIT(x)  mb_init(x)

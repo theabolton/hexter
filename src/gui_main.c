@@ -283,6 +283,8 @@ update_request_timeout_callback(gpointer data)
 
 /* ==== main ==== */
 
+char *test_argv[5] = { NULL, NULL, "-", "-", "hexter" };
+
 int
 main(int argc, char *argv[])
 {
@@ -291,25 +293,30 @@ main(int argc, char *argv[])
     gint osc_server_socket_tag;
     gint update_request_timeout_tag;
 
-    DSSP_DEBUG_INIT("hexter6_gtk");
+    DSSP_DEBUG_INIT("hexter_gtk");
 
 #ifdef DSSP_DEBUG
     GUIDB_MESSAGE(DB_MAIN, " starting (pid %d)...\n", getpid());
 #else
-    fprintf(stderr, "hexter6_gtk starting (pid %d)...\n", getpid());
+    fprintf(stderr, "hexter_gtk starting (pid %d)...\n", getpid());
 #endif
     /* { int i; fprintf(stderr, "args:\n"); for(i=0; i<argc; i++) printf("%d: %s\n", i, argv[i]); } // debug */
 
     gtk_set_locale();
     gtk_init(&argc, &argv);
 
-    if (argc != 5) {
-        fprintf(stderr, "usage: %s <osc url> <plugin dllname> <plugin label> <user-friendly id>\n", argv[0]);
-        exit(1);
-    }
     if (!strcmp(argv[1], "-test")) {
         gui_test_mode = 1;
-        argv[1] = "osc.udp://localhost:9/test/mode";
+        test_argv[0] = argv[0];
+        test_argv[1] = "osc.udp://localhost:9/test/mode";
+        if (argc >= 5)
+            test_argv[4] = argv[4];
+        argc = 5;
+        argv = test_argv;
+    } else if (argc != 5) {
+        fprintf(stderr, "usage: %s <osc url> <plugin dllname> <plugin label> <user-friendly id>\n"
+                        "   or: %s -test\n", argv[0], argv[0]);
+        exit(1);
     }
     user_friendly_id = argv[4];
 
@@ -341,13 +348,14 @@ main(int argc, char *argv[])
     tmp_url = lo_server_get_url(osc_server);
     osc_self_url = osc_build_path(tmp_url, (strlen(path) > 1 ? path + 1 : path));
     free(tmp_url);
+    GUIDB_MESSAGE(DB_OSC, ": listening at %s\n", osc_self_url);
 
     /* set up GTK+ */
     create_windows(user_friendly_id);
 
     /* add OSC server socket to GTK+'s watched I/O */
     if (lo_server_get_socket_fd(osc_server) < 0) {
-        fprintf(stderr, "hexter6_gtk fatal: OSC transport does not support exposing socket fd\n");
+        fprintf(stderr, "hexter_gtk fatal: OSC transport does not support exposing socket fd\n");
         exit(1);
     }
     osc_server_socket_tag = gdk_input_add(lo_server_get_socket_fd(osc_server),

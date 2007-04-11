@@ -1,12 +1,28 @@
+20070411 version 0.6.1
+
+* hexter now installs as DSSI plugin 'hexter', just like the 0.5.9
+    and earlier versions, eliminating the trouble the versioned
+    plugin names would cause distribution packagers.  The plugin
+    files installed are again:
+        <prefix>/lib/dssi/hexter/hexter_gtk
+        <prefix>/lib/dssi/hexter.so
+        <prefix>/lib/dssi/hexter.la
+
+    Also, there is now a 'disable LFO/Mod/Perf (0.5.x compatibility)'
+    option in the hexter GUI which disables the version 0.6.x LFO,
+    amplitude and pitch modulation functions, allowing projects made
+    with version 0.5.9 to sound as they were originally created.
+
 20070118 version 0.6.0
 
-* hexter now installs as DSSI plugin 'hexter6', with the following
-    files:
+* hexter version 0.6.0 installed as DSSI plugin 'hexter6', with the
+    following files:
         <prefix>/lib/dssi/hexter6/hexter6_gtk
         <prefix>/lib/dssi/hexter6.so
         <prefix>/lib/dssi/hexter6.la
-    This allows the venerable hexter 0.5.9 to be installed alongside
-    the still-being-polished 0.6.0 version.
+    This allowed hexter 0.5.9 to be installed alongside the 0.6.0
+    version, but was a headache for distribution packagers, so this
+    was abandoned with version 0.6.1.
 
 * Implemented the LFO, amplitude modulation and pitch modulation
     (many thanks to Jamie Bullock)!

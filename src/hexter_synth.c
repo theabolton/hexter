@@ -653,6 +653,14 @@ hexter_instance_set_performance_data(hexter_instance_t *instance)
     instance->pressure_assign       = limit(perf_buffer[14], 0, 7);
     instance->breath_sensitivity    = limit(perf_buffer[15], 0, 15);
     instance->breath_assign         = limit(perf_buffer[16], 0, 7);
+    if (perf_buffer[0] & 0x01) { /* 0.5.9 compatibility */
+        instance->pitch_bend_range      = 2;
+        instance->portamento_time       = 0;
+        instance->mod_wheel_sensitivity = 0;
+        instance->foot_sensitivity      = 0;
+        instance->pressure_sensitivity  = 0;
+        instance->breath_sensitivity    = 0;
+    }
 }
 
 /*

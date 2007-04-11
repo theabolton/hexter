@@ -592,7 +592,7 @@ void _init()
     LADSPA_PortDescriptor *port_descriptors;
     LADSPA_PortRangeHint *port_range_hints;
 
-    DSSP_DEBUG_INIT("hexter6.so");
+    DSSP_DEBUG_INIT("hexter.so");
 
     hexter_synth.initialized = 0;
     pthread_mutex_init(&hexter_synth.mutex, NULL);
@@ -603,8 +603,8 @@ void _init()
     hexter_LADSPA_descriptor =
         (LADSPA_Descriptor *) malloc(sizeof(LADSPA_Descriptor));
     if (hexter_LADSPA_descriptor) {
-        hexter_LADSPA_descriptor->UniqueID = 2188;
-        hexter_LADSPA_descriptor->Label = "hexter6";
+        hexter_LADSPA_descriptor->UniqueID = 2183;
+        hexter_LADSPA_descriptor->Label = "hexter";
         hexter_LADSPA_descriptor->Properties = 0;
         hexter_LADSPA_descriptor->Name = "hexter DX7 emulation (v" VERSION ")";
         hexter_LADSPA_descriptor->Maker = "Sean Bolton <musound AT jps DOT net>";

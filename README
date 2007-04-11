@@ -100,9 +100,9 @@ aren't particularly helpful, so try this instead:
 
 6. 'make install' will install the following:
 
-    <prefix>/lib/dssi/hexter6/hexter6_gtk
-    <prefix>/lib/dssi/hexter6.so
-    <prefix>/lib/dssi/hexter6.la
+    <prefix>/lib/dssi/hexter/hexter_gtk
+    <prefix>/lib/dssi/hexter.so
+    <prefix>/lib/dssi/hexter.la
     <prefix>/share/hexter/dx7_roms.dx7
     <prefix>/share/hexter/fb01_roms_converted_12.dx7
     <prefix>/share/hexter/fb01_roms_converted_34.dx7
@@ -121,7 +121,7 @@ in the DSSI distribution, I do the following:
 2. Start jack-dssi-host, supplying the correct plugin path
     and filename (substitute <prefix> as appropriate):
 
-    $ DSSI_PATH=<prefix>/lib/dssi sudo jack-dssi-host hexter6.so
+    $ DSSI_PATH=<prefix>/lib/dssi sudo jack-dssi-host hexter.so
 
     jack-dssi-host should start, and moments later the hexter
     graphic user interface should appear.
@@ -185,7 +185,7 @@ filename to which you want to save, and click 'Ok'.
 
 Synthesizer Configuration
 =========================
-On the 'Configuration' tab of the hexter GUI,  there are five
+On the 'Configuration' tab of the hexter GUI,  there are six
 controls for configuring hexter:
 
 - tuning: sets the tuning of this instance of the plugin,
@@ -217,6 +217,13 @@ controls for configuring hexter:
     'Both' - monophonic operation, where the envelopes are
              retriggered at each note on, and upon note off when
              other keys are still held.
+
+- disable LFO/Mod/Perf (0.5.x compatibility): selecting this check
+    box will disable the LFO, amplitude modulation, pitch
+    modulation, and performance parameter enhancements provided by
+    hexter 0.6.0 and later versions, forcing it to sound just like
+    the 0.5.9 version.  This is provided for backward compatibility
+    with existing projects that used hexter 0.5.9.
 
 Sys-Ex Patch Editing
 ====================
@@ -257,7 +264,7 @@ DX7/TX7 Performance Parameters:
     in semitones.
 
 - portamento time: sets the portamento time.  Note that as of
-    version 0.6.0, the portamento code is still unfinished.
+    version 0.6.1, the portamento code is still unfinished.
 
 - mod wheel sensitivity: sets the depth of response to MIDI
     modulation wheel control change messages (MIDI control change 1).
@@ -301,9 +308,9 @@ hostname is 'foo.bar.net', make sure you either have an entry for
 'foo.bar.net' in /etc/hosts, or that your DNS server can resolve it.
 Test this with e.g. 'ping foo.bar.net'. To test that the GUI itself
 works, you can start it by itself (without a DSSI host) by giving it
-the '-test' option (plus three dummy arguments), for example:
+the '-test' option, for example:
 
-    $ <prefix>/lib/dssi/hexter6/hexter6_gtk -test a b c
+    $ <prefix>/lib/dssi/hexter/hexter_gtk -test
 
 Resources:
 ==========

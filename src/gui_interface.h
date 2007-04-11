@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004, 2006 Sean Bolton and others.
+ * Copyright (C) 2004-2007 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -29,6 +29,7 @@ extern GtkObject *volume_adj;
 extern GtkObject *polyphony_instance_adj;
 extern GtkObject *polyphony_global_adj;
 extern GtkWidget *monophonic_option_menu;
+extern GtkWidget *compat059_button;
 extern GtkWidget *sysex_channel_label;
 extern GtkWidget *sysex_channel_spin;
 extern GtkWidget *sysex_status_label;
@@ -75,6 +76,7 @@ extern GtkWidget *patches_clist;
 #define PP_PRESSURE_ASSIGN   2
 #define PP_BREATH_ASSIGN     3
 
+extern GtkWidget *performance_frame;
 extern GtkObject *performance_spin_adjustments[6];
 extern GtkWidget *performance_assign_widgets[4][3];
 extern const char *performance_spin_names[6];

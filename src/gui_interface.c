@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004-2006 Sean Bolton and others.
+ * Copyright (C) 2004-2007 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -39,11 +39,13 @@ GtkObject *volume_adj;
 GtkObject *polyphony_instance_adj;
 GtkObject *polyphony_global_adj;
 GtkWidget *monophonic_option_menu;
+GtkWidget *compat059_button;
 GtkWidget *sysex_channel_label;
 GtkWidget *sysex_channel_spin;
 GtkWidget *sysex_status_label;
 GtkWidget *sysex_discard_button;
 GtkWidget *sysex_save_button;
+GtkWidget *performance_frame;
 GtkObject *performance_spin_adjustments[6];
 GtkWidget *performance_assign_widgets[4][3];
 
@@ -281,7 +283,6 @@ create_main_window (const char *tag)
     GtkWidget *label11;
 #endif /* MIDI_ALSA */
     GtkWidget *configuration_tab_label;
-    GtkWidget *performance_frame;
     GtkWidget *performance_table;
     GtkWidget *performance_tab_label;
     GtkAccelGroup *accel_group;
@@ -446,7 +447,7 @@ create_main_window (const char *tag)
     gtk_widget_show (frame14);
     gtk_box_pack_start (GTK_BOX (vbox2), frame14, TRUE, TRUE, 0);
 
-    table16 = gtk_table_new (2, 5, FALSE);
+    table16 = gtk_table_new (2, 6, FALSE);
     gtk_widget_ref (table16);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "table16", table16,
                               (GtkDestroyNotify) gtk_widget_unref);
@@ -577,6 +578,22 @@ create_main_window (const char *tag)
                       (GtkAttachOptions) (0), 0, 0);
     gtk_misc_set_alignment (GTK_MISC (label44), 0, 0.5);
     gtk_misc_set_padding (GTK_MISC (label44), 2, 0);
+
+    label44 = gtk_label_new ("disable LFO/Mod/Perf\n"
+                             "(0.5.x compatibility)");
+    gtk_widget_show (label44);
+    gtk_table_attach (GTK_TABLE (table16), label44, 0, 1, 5, 6,
+                      (GtkAttachOptions) (GTK_FILL),
+                      (GtkAttachOptions) (0), 0, 0);
+    gtk_misc_set_alignment (GTK_MISC (label44), 0, 0.5);
+    gtk_misc_set_padding (GTK_MISC (label44), 2, 0);
+
+    compat059_button = gtk_check_button_new();
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(compat059_button), 0);
+    gtk_widget_show (compat059_button);
+    gtk_table_attach (GTK_TABLE (table16), compat059_button, 1, 2, 5, 6,
+                      (GtkAttachOptions) (GTK_FILL),
+                      (GtkAttachOptions) (0), 0, 0);
 
 #ifdef MIDI_ALSA
     frame15 = gtk_frame_new ("Sys-Ex Patch Editing");
@@ -857,7 +874,9 @@ create_main_window (const char *tag)
     gtk_signal_connect (GTK_OBJECT (mono_mode_both), "activate",
                         GTK_SIGNAL_FUNC (on_mono_mode_activate),
                         (gpointer)"both");
-
+    gtk_signal_connect (GTK_OBJECT (compat059_button), "toggled",
+                        GTK_SIGNAL_FUNC (on_compat059_toggled),
+                        NULL);
 #ifdef MIDI_ALSA
     /* connect sys-ex widgets */
     gtk_signal_connect (GTK_OBJECT (sysex_enable_button), "toggled",
