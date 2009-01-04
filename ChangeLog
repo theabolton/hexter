@@ -1,3 +1,13 @@
+20090103 version 0.6.2
+
+* Silently ignore 'sample-rate' method.
+
+* Fixed GtkSpinButton adjustments to avoid page_size warning with
+    GTK+ >=2.14.
+
+* Added Martin Tarenskeen's patch loading enhancements to
+    extra/tx_edit.c.
+
 20070411 version 0.6.1
 
 * hexter now installs as DSSI plugin 'hexter', just like the 0.5.9

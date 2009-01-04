@@ -1,10 +1,10 @@
                                 hexter
                                 ======
                A Yamaha DX7 modeling software synthesizer
-                for the Disposable Soft Synth Interface
+                   for the DSSI Soft Synth Interface
 
 hexter is written and maintained by Sean Bolton.  It is copyright
-(c) 2007 under the GNU General Public License, version 2 or later.
+(c) 2009 under the GNU General Public License, version 2 or later.
 Bug reports, kudos, and job offers (seriously!) should go directly
 to Sean at the email address:
 

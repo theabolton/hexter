@@ -1,7 +1,7 @@
                                 hexter
                                 ======
                A Yamaha DX7 modeling software synthesizer
-                for the Disposable Soft Synth Interface
+                   for the DSSI Soft Synth Interface
 
 Introduction
 ============
@@ -12,14 +12,14 @@ systems only), and recreate the sound of the DX7 with greater
 accuracy than any previous open-source emulation (that the author is
 aware of....)
 
-hexter operates as a plugin for the Disposable Soft Synth Interface
-(DSSI).  DSSI is a plugin API for software instruments (soft synths)
-with user interfaces, permitting them to be hosted in-process by
-audio applications.  More information on DSSI can be found at:
+hexter operates as a plugin for the DSSI Soft Synth Interface.  DSSI
+is a plugin API for software instruments (soft synths) with user
+interfaces, permitting them to be hosted in-process by audio
+applications.  More information on DSSI can be found at:
 
   http://dssi.sourceforge.net/
 
-hexter is written by Sean Bolton, and copyright (c)2007 under the
+hexter is written by Sean Bolton, and copyright (c) 2009 under the
 GNU General Public License, version 2 or later.  See the enclosed
 file COPYING for details.  While this software is 'free' within the
 requirements of this license, I (Sean) would appreciate any or all
@@ -59,13 +59,13 @@ hexter requires the following:
         drivers installed.)  Users of non-ALSA systems may use
         libdssialsacompat, available at:
 
-        http://home.jps.net/~musound/
+        http://smbolton.com/linux.html
 
     - a working DSSI host.  hexter has been tested with the
         jack-dssi-host, available in the DSSI distribution, and with
         ghostess, available at:
 
-        http://home.jps.net/~musound/
+        http://smbolton.com/linux.html
 
     - automake 1.7 and autoconf 2.57 or better if you wish to
         recreate the build files.
@@ -314,9 +314,8 @@ the '-test' option, for example:
 
 Resources:
 ==========
-http://www.myjavaserver.com/~christopher/dx7_tx7.html
-    Chris Dodunski's DX7 page, has much info as well as links to
-    patch files.
+http://www.thedx7.co.uk/index.html
+    Steve Sims' site with lots of information, patches, and links.
 
 http://www.maths.abdn.ac.uk/~bensondj/html/dx7.html
     Dave Benson's DX7 page, has much info as well as links to patch

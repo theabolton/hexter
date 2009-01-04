@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin and GUI
  *
- * Copyright (C) 2004-2006 Sean Bolton and others.
+ * Copyright (C) 2004, 2009 Sean Bolton and others.
  *
  * DX7 patchbank loading code by Martin Tarenskeen.
  *
@@ -19,8 +19,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02110-1301 USA.
  */
 
 #include <stdlib.h>
@@ -320,7 +320,7 @@ dx7_patchbank_load(const char *filename, dx7_patch_t *firstpatch,
         if (errmsg) *errmsg = strdup("patch file has zero length");
         fclose(fp);
         return 0;
-    } else if (filelength > 16384) {
+    } else if (filelength > 2097152) {
         if (errmsg) *errmsg = strdup("patch file is too large");
         fclose(fp);
         return 0;

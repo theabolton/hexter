@@ -1,13 +1,12 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(hexter, 0.6.1, musound-at-jps-dot-net)
+AC_INIT(hexter, 0.6.2, musound-at-jps-dot-net)
 
 AC_CONFIG_SRCDIR(src/hexter.c)
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
 
 AC_PROG_CC
-AC_HEADER_STDC
 
 AC_ENABLE_STATIC(no)
 AC_ENABLE_SHARED(yes)
@@ -53,6 +52,12 @@ fi
 AM_CONDITIONAL(BUILD_TEXTUI, test "x${with_textui}" = 'xyes')
 echo "GTK support: $with_gtk"
 
+dnl Check for LADSPA
+AC_CHECK_HEADERS(ladspa.h)
+
+dnl Require DSSI and liblo
+PKG_CHECK_MODULES(MODULE, dssi >= 0.4 liblo >= 0.12)
+
 dnl OS specific checks
 case "${host_os}" in
 darwin*)
@@ -68,9 +73,6 @@ darwin*)
   ;;
 esac
 AM_CONDITIONAL(DARWIN, test x$darwin = xyes)
-
-dnl Require DSSI and liblo
-PKG_CHECK_MODULES(MODULE, dssi >= 0.4 liblo >= 0.12)
 
 dnl dnl Set PACKAGE_DATA_DIR in config.h.
 dnl if test "x${datadir}" = 'x${prefix}/share'; then

@@ -1,6 +1,6 @@
 /* Yamaha DX7 / TX7 Editor/Librarian
  *
- * Copyright (C) 1991, 1995, 1997, 1998, 2004 Sean Bolton.
+ * Copyright (C) 1991, 1995, 1997, 1998, 2004, 2009 Sean Bolton.
  *
  * This is an ncurses-based patch editor for the Yamaha DX7 and
  * TX7.  It is provided as-is, without any documentation, and
@@ -25,13 +25,15 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02110-1301 USA.
  * 
  * Revision History:
  * 20040126 Sean Bolton - made help functions helpful, added ALSA support
  * 20040205 Sean Bolton - clean up display with noecho, line drawing
  * 20040207 Sean Bolton - add next/previous voice commands to edit mode
+ * 20090102 Sean Bolton - incorporated Martin Tarenskeen's patch loading
+ *                        enhancements
  */
 
 /* Need to do:                              */
@@ -41,7 +43,7 @@
 /*   a search option would be nice          */
 /*   show channel/instrument on display     */
 
-#define VERSIONSTRING "0.88s"
+#define VERSIONSTRING "0.92s"
 
 /* Undefine USE_ALSA_MIDI to just write to /dev/midi */
 #define USE_ALSA_MIDI 1
@@ -902,13 +904,13 @@ Unpack(int voice)
 }
 
 void
-Pack(int voice)
+_Pack(UBYTE *packed, UBYTE *unpacked)
 {
     UBYTE *a2, *a3;
     UBYTE  d1,  d2;
 
-        a3=voiceAddr(voice); /* a3 = &packed data   */
-        a2=SingleData;       /* a2 = &unpacked data */
+        a3=packed;    /* a3 = &packed data   */
+        a2=unpacked;  /* a2 = &unpacked data */
         for (d2=6; d2>0; d2--) {
             for (d1=11; d1>0; d1--) { *a3++=*a2++; }  /* through rd */
             *a3++=((*a2)&0x03)|(((*(a2+1))&0x03)<<2);
@@ -938,6 +940,12 @@ d2=a2-SingleData;
 cprintf("155 %d\r\n",d2);
 getch();
 #endif
+}
+
+void
+Pack(int voice)
+{
+    _Pack(voiceAddr(voice), SingleData);
 }
 
 void
@@ -1051,14 +1059,6 @@ PutParm(int parm)
 
 /* ==== Load/Save Routines ==== */
 
-void
-LoadError(void)
-{
-    cprintf(" Load - Error reading file '%s':\n", FNameBuff);
-    cprintf(" '%s'!\n", strerror(errno));
-    paktc();
-}
-
 bool
 FileRequest(char *namebuf, char *title)
 {
@@ -1073,50 +1073,162 @@ FileRequest(char *namebuf, char *title)
     return (strlen(namebuf)!=0);
 }
 
-long filelength(FILE *fh) {
-    long fl0, fle;
-
-    if ((fl0 = ftell(fh)) == -1) return -1;
-    if (fseek(fh, 0L, SEEK_END)) return -1;
-    if ((fle = ftell(fh)) == -1) return -1;
-    if (fseek(fh, fl0, SEEK_SET)) return -1;
-    return fle;
-}
-    
-int
-Load(char *fn)  /* load file, return number of voices loaded */
+void
+LoadError(const char *filename, const char *error)
 {
-    FILE *fh;
-    long flength;
-    int voices = 0;
+    cprintf(" Load - Error reading file '%s':\n", filename);
+    cprintf(" '%s'!\n", error);
+    paktc();
+}
 
-    if ((fh = fopen(fn, "rb")) != 0) {
-        if (-1 != (flength = filelength(fh))) {
-            voices = (flength + VSIZEPACKED - 1) / VSIZEPACKED;
-         /* if ( voices-in-file <= voices-to-end-of-buffer ) */
-            if (voices <= Voices - Voice_Cursor) {
-                if (flength == fread(voiceAddr(Voice_Cursor), 1, flength, fh)) {
-                    cprintf(" File '%s' loaded.\n", fn);
-                } else {
-                    LoadError();
-                    voices = 0;
-                }
-            } else {
-                cprintf(" File '%s' is too big to load", fn);
-                if (Voice_Cursor) cprintf(" at this position");
-                cprintf("\n");
-                paktc();
-                voices = 0;
-            }
-        } else
-            LoadError();
-        fclose(fh);
-    } else {
-        cprintf(" Load - Error opening file '%s':\n", fn);
-        cprintf(" '%s'!\n", strerror(errno));
-        paktc();
+int
+Load(char *filename)
+{
+    FILE *fp;
+    char errbuf[256];
+    long filelength;
+    unsigned char *raw_patch_data = NULL;
+    size_t filename_length;
+    int count;
+    int patchstart;
+    int midshift;
+    int datastart;
+
+    /* this needs to 1) open and parse the file, 2a) if it's good, copy as
+     * many patches as will fit into VoiceData beginning at Voice_Cursor,
+     * 2b) if it's not good, print an appropriate error message and return. */
+
+    if ((fp = fopen(filename, "rb")) == NULL) {
+        snprintf(errbuf, 256, "could not open file for reading: %s", strerror(errno));
+        LoadError(filename, errbuf);
+        return 0;
     }
-    return voices;
+    if (fseek(fp, 0, SEEK_END) ||
+        (filelength = ftell(fp)) == -1 ||
+        fseek(fp, 0, SEEK_SET)) {
+        snprintf(errbuf, 256, "couldn't get length of patch file: %s", strerror(errno));
+        fclose(fp);
+        LoadError(filename, errbuf);
+        return 0;
+    }
+    if (filelength == 0) {
+        fclose(fp);
+        LoadError(filename, "patch file has zero length");
+        return 0;
+    } else if (filelength > 2097152) {
+        fclose(fp);
+        LoadError(filename, "patch file is too large");
+        return 0;
+    } else if (filelength < 128) {
+        fclose (fp);
+        LoadError(filename, "patch file is too small");
+        return 0;
+    }
+
+    if (!(raw_patch_data = (unsigned char *)malloc(filelength))) {
+        fclose(fp);
+        LoadError(filename, "couldn't allocate memory for raw patch file");
+        return 0;
+    }
+
+    if (fread(raw_patch_data, 1, filelength, fp) != (size_t)filelength) {
+        snprintf(errbuf, 256, "short read on patch file: %s", strerror(errno));
+        free(raw_patch_data);
+        fclose(fp);
+        LoadError(filename, errbuf);
+        return 0;
+    }
+    fclose(fp);
+
+    /* check if the file is a standard MIDI file */
+    if (raw_patch_data[0] == 0x4d &&	/* "M" */
+        raw_patch_data[1] == 0x54 &&	/* "T" */
+        raw_patch_data[2] == 0x68 &&	/* "h" */
+        raw_patch_data[3] == 0x64)	/* "d" */
+        midshift = 2;
+    else
+        midshift = 0;
+
+    /* scan SysEx or MIDI file for SysEx header */
+    count = 0;
+    datastart = 0;
+    for (patchstart = 0; patchstart + midshift + 5 < filelength; patchstart++) {
+        
+        if (raw_patch_data[patchstart] == 0xf0 &&
+            raw_patch_data[patchstart + 1 + midshift] == 0x43 &&
+            raw_patch_data[patchstart + 2 + midshift] <= 0x0f &&
+            raw_patch_data[patchstart + 3 + midshift] == 0x09 &&
+            raw_patch_data[patchstart + 5 + midshift] == 0x00 &&
+            patchstart + 4103 + midshift < filelength &&
+            raw_patch_data[patchstart + 4103 + midshift] == 0xf7) {  /* DX7 32 voice dump */
+
+            count = 32;
+            datastart = patchstart + 6 + midshift;
+            break;
+
+        } else if (raw_patch_data[patchstart] == 0xf0 && 
+                   raw_patch_data[patchstart + midshift + 1] == 0x43 && 
+                   raw_patch_data[patchstart + midshift + 2] <= 0x0f && 
+                   raw_patch_data[patchstart + midshift + 4] == 0x01 && 
+                   raw_patch_data[patchstart + midshift + 5] == 0x1b &&
+                   patchstart + midshift + 162 < filelength &&
+                   raw_patch_data[patchstart + midshift + 162] == 0xf7) {  /* DX7 single voice (edit buffer) dump */
+
+            _Pack(raw_patch_data,
+                  raw_patch_data + patchstart + midshift + 6);
+
+            datastart = 0;
+            count = 1;
+            break;
+        }
+    }
+            
+    /* assume raw DX7/TX7 data if no SysEx header was found. */
+    /* assume the user knows what she is doing ;-) */
+
+    if (count == 0)
+        count = filelength / 128;
+
+    /* Dr.T TX7 file needs special treatment */
+    filename_length = strlen (filename);
+    if ((!strcmp(filename + filename_length - 4, ".TX7") ||
+         !strcmp(filename + filename_length - 4, ".tx7")) && filelength == 8192) {
+
+        count = 32;
+        filelength = 4096;
+    }
+
+    /* Voyetra SIDEMAN DX/TX */
+    if (filelength == 9816 &&
+        raw_patch_data[0] == 0xdf &&
+        raw_patch_data[1] == 0x05 &&
+        raw_patch_data[2] == 0x01 && raw_patch_data[3] == 0x00) {
+
+        count = 32;
+        datastart = 0x60f;
+    }
+
+    /* Double SySex bank */
+    if (filelength == 8208 &&
+        raw_patch_data[4104] == 0xf0 && raw_patch_data[4104 + 4103] == 0xf7) {
+
+        memcpy(raw_patch_data + 4102, raw_patch_data + 4110, 4096);
+        count = 64;
+        datastart = 6;
+    }
+
+    /* finally, copy patchdata to the right location */
+    if (count > Voices - Voice_Cursor) {  /* if ( voices-in-file > voices-to-end-of-buffer ) */
+        cprintf(" Load - Patch file '%s' too big for remaining space:\n", filename);
+        cprintf(" %d patches in file, only %d loaded!\n", count, Voices - Voice_Cursor);
+        paktc();
+        count = Voices - Voice_Cursor;
+    }
+
+    memcpy(voiceAddr(Voice_Cursor), raw_patch_data + datastart, 128 * count);
+    free (raw_patch_data);
+    cprintf(" File '%s' loaded.\n", filename);
+    return count;
 }
 
 void
@@ -1735,7 +1847,7 @@ LibPrintVName(int voice)  /* print name at correct cursor position */
 	    if (voice < 10000) {
                 cprintf("%4d ", voice);
             } else {
-		cprintf("?%03d ", voice % 10000);
+		cprintf("?%03d ", voice % 1000);
             }
             if (voice==Voice_Cursor) {
                 if(blocking)

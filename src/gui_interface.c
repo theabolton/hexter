@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004-2007 Sean Bolton and others.
+ * Copyright (C) 2004, 2009 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02110-1301 USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -121,7 +121,7 @@ create_performance_spin(GtkWidget *window, const char *text, GtkWidget *table,
     gtk_misc_set_alignment (GTK_MISC (label), 0, 0.5);
     gtk_misc_set_padding (GTK_MISC (label), 2, 0);
 
-    spin_button_adj = gtk_adjustment_new (init, 0, max, 1, 10, 10);
+    spin_button_adj = gtk_adjustment_new (init, 0, max, 1, 10, 0);
     performance_spin_adjustments[parameter] = spin_button_adj;
     spin_button = gtk_spin_button_new (GTK_ADJUSTMENT (spin_button_adj), 1, 0);
     gtk_widget_ref (spin_button);
@@ -468,7 +468,7 @@ create_main_window (const char *tag)
     gtk_misc_set_alignment (GTK_MISC (label43a), 0, 0.5);
     gtk_misc_set_padding (GTK_MISC (label43a), 2, 0);
 
-    tuning_adj = gtk_adjustment_new (440.0, 415.3, 466.2, 0.1, 1, 1);
+    tuning_adj = gtk_adjustment_new (440.0, 415.3, 466.2, 0.1, 1, 0);
     tuning = gtk_spin_button_new (GTK_ADJUSTMENT (tuning_adj), 1, 1);
     gtk_widget_ref (tuning);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "tuning", tuning,
@@ -491,7 +491,7 @@ create_main_window (const char *tag)
     gtk_misc_set_alignment (GTK_MISC (volume_label), 0, 0.5);
     gtk_misc_set_padding (GTK_MISC (volume_label), 2, 0);
 
-    volume_adj = gtk_adjustment_new (0.0, -70.0, 20.0, 0.1, 1, 1);
+    volume_adj = gtk_adjustment_new (0.0, -70.0, 20.0, 0.1, 1, 0);
     volume = gtk_spin_button_new (GTK_ADJUSTMENT (volume_adj), 1, 1);
     gtk_widget_ref (volume);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "volume", volume,
@@ -526,7 +526,7 @@ create_main_window (const char *tag)
     gtk_menu_append (GTK_MENU (optionmenu5_menu), mono_mode_both);
     gtk_option_menu_set_menu (GTK_OPTION_MENU (monophonic_option_menu), optionmenu5_menu);
 
-    polyphony_instance_adj = gtk_adjustment_new (HEXTER_DEFAULT_POLYPHONY, 1, HEXTER_MAX_POLYPHONY, 1, 10, 10);
+    polyphony_instance_adj = gtk_adjustment_new (HEXTER_DEFAULT_POLYPHONY, 1, HEXTER_MAX_POLYPHONY, 1, 10, 0);
     polyphony_instance = gtk_spin_button_new (GTK_ADJUSTMENT (polyphony_instance_adj), 1, 0);
     gtk_widget_ref (polyphony_instance);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "polyphony_instance", polyphony_instance,
@@ -547,7 +547,7 @@ create_main_window (const char *tag)
     gtk_misc_set_alignment (GTK_MISC (label43), 0, 0.5);
     gtk_misc_set_padding (GTK_MISC (label43), 2, 0);
 
-    polyphony_global_adj = gtk_adjustment_new (HEXTER_DEFAULT_POLYPHONY, 1, HEXTER_MAX_POLYPHONY, 1, 10, 10);
+    polyphony_global_adj = gtk_adjustment_new (HEXTER_DEFAULT_POLYPHONY, 1, HEXTER_MAX_POLYPHONY, 1, 10, 0);
     polyphony_global = gtk_spin_button_new (GTK_ADJUSTMENT (polyphony_global_adj), 1, 0);
     gtk_widget_ref (polyphony_global);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "polyphony_global", polyphony_global,
@@ -643,7 +643,7 @@ create_main_window (const char *tag)
     gtk_misc_set_alignment (GTK_MISC (sysex_channel_label), 0, 0.5);
     gtk_widget_set_sensitive (sysex_channel_label, FALSE);
 
-    sysex_channel_spin_adj = gtk_adjustment_new (1, 1, 16, 1, 10, 10);
+    sysex_channel_spin_adj = gtk_adjustment_new (1, 1, 16, 1, 10, 0);
     sysex_channel_spin = gtk_spin_button_new (GTK_ADJUSTMENT (sysex_channel_spin_adj), 1, 0);
     gtk_widget_ref (sysex_channel_spin);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "sysex_channel_spin", sysex_channel_spin,
@@ -1062,7 +1062,7 @@ create_import_file_position_window (const char *tag)
     gtk_widget_show (label50);
     gtk_box_pack_start (GTK_BOX (hbox2), label50, FALSE, TRUE, 2);
 
-    import_file_position_spin_adj = gtk_adjustment_new (0, 0, 127, 1, 10, 10);
+    import_file_position_spin_adj = gtk_adjustment_new (0, 0, 127, 1, 10, 0);
     position_spin = gtk_spin_button_new (GTK_ADJUSTMENT (import_file_position_spin_adj), 1, 0);
     gtk_widget_ref (position_spin);
     gtk_object_set_data_full (GTK_OBJECT (import_file_position_window),
@@ -1129,7 +1129,7 @@ create_notice_window (const char *tag)
     GtkWidget *hbox1;
     GtkWidget *notice_dismiss;
 
-    notice_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);  /* or GTK_WINDOW_DIALOG? */
+    notice_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
     gtk_object_set_data (GTK_OBJECT (notice_window), "notice_window", notice_window);
     set_window_title(notice_window, tag, "Notice");
     gtk_window_set_position (GTK_WINDOW (notice_window), GTK_WIN_POS_MOUSE);
@@ -1326,7 +1326,7 @@ create_export_file_type_window (const char *tag)
     gtk_misc_set_alignment (GTK_MISC (export_file_end_label), 0, 0.5);
       gtk_widget_set_sensitive (export_file_end_label, FALSE);
 
-    export_file_start_spin_adj = gtk_adjustment_new (0, 0, 96, 1, 10, 10);
+    export_file_start_spin_adj = gtk_adjustment_new (0, 0, 96, 1, 10, 0);
     export_file_start_spin = gtk_spin_button_new (GTK_ADJUSTMENT (export_file_start_spin_adj), 1, 0);
     gtk_widget_ref (export_file_start_spin);
     gtk_object_set_data_full (GTK_OBJECT (export_file_type_window), "export_file_start_spin", export_file_start_spin,
@@ -1337,7 +1337,7 @@ create_export_file_type_window (const char *tag)
                       (GtkAttachOptions) (0), 0, 0);
     gtk_spin_button_set_numeric (GTK_SPIN_BUTTON (export_file_start_spin), TRUE);
 
-    export_file_end_spin_adj = gtk_adjustment_new (31, 0, 127, 1, 10, 10);
+    export_file_end_spin_adj = gtk_adjustment_new (31, 0, 127, 1, 10, 0);
     export_file_end_spin = gtk_spin_button_new (GTK_ADJUSTMENT (export_file_end_spin_adj), 1, 0);
     gtk_widget_ref (export_file_end_spin);
     gtk_object_set_data_full (GTK_OBJECT (export_file_type_window), "export_file_end_spin", export_file_end_spin,
@@ -1516,7 +1516,7 @@ create_edit_save_position_window (const char *tag)
     gtk_widget_show (label50);
     gtk_box_pack_start (GTK_BOX (hbox2), label50, FALSE, TRUE, 2);
 
-    edit_save_position_spin_adj = gtk_adjustment_new (0, 0, 127, 1, 10, 10);
+    edit_save_position_spin_adj = gtk_adjustment_new (0, 0, 127, 1, 10, 0);
     position_spin = gtk_spin_button_new (GTK_ADJUSTMENT (edit_save_position_spin_adj), 1, 0);
     gtk_widget_ref (position_spin);
     gtk_object_set_data_full (GTK_OBJECT (edit_save_position_window),

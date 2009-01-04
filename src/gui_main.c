@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004-2007 Sean Bolton and others.
+ * Copyright (C) 2004, 2009 Sean Bolton and others.
  *
  * Portions of this file may have come from Chris Cannam and Steve
  * Harris's public domain DSSI example code.
@@ -17,8 +17,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the Free
- * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307, USA.
+ * Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02110-1301 USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -58,6 +58,7 @@ char *     osc_hide_path;
 char *     osc_midi_path;
 char *     osc_program_path;
 char *     osc_quit_path;
+char *     osc_rate_path;
 char *     osc_show_path;
 char *     osc_update_path;
 
@@ -138,6 +139,11 @@ osc_action_handler(const char *path, const char *types, lo_arg **argv,
         /* GUIDB_MESSAGE(DB_OSC, " osc_action_handler: received 'quit' message\n"); */
         host_requested_quit = 1;
         gtk_main_quit();
+
+    } else if (!strcmp(user_data, "sample-rate")) {
+
+        /* GUIDB_MESSAGE(DB_OSC, " osc_action_handler: received 'sample-rate' message, rate = %d\n", argv[0]->i); */
+        /* ignore it */
 
     } else {
 
@@ -333,6 +339,7 @@ main(int argc, char *argv[])
     osc_midi_path      = osc_build_path(path, "/midi");
     osc_program_path   = osc_build_path(path, "/program");
     osc_quit_path      = osc_build_path(path, "/quit");
+    osc_quit_path      = osc_build_path(path, "/sample-rate");
     osc_show_path      = osc_build_path(path, "/show");
     osc_update_path    = osc_build_path(path, "/update");
 
@@ -342,6 +349,7 @@ main(int argc, char *argv[])
     lo_server_add_method(osc_server, osc_hide_path, "", osc_action_handler, "hide");
     lo_server_add_method(osc_server, osc_program_path, "ii", osc_program_handler, NULL);
     lo_server_add_method(osc_server, osc_quit_path, "", osc_action_handler, "quit");
+    lo_server_add_method(osc_server, osc_rate_path, "i", osc_action_handler, "sample-rate");
     lo_server_add_method(osc_server, osc_show_path, "", osc_action_handler, "show");
     lo_server_add_method(osc_server, NULL, NULL, osc_debug_handler, NULL);
 
@@ -409,6 +417,7 @@ main(int argc, char *argv[])
     free(osc_midi_path);
     free(osc_program_path);
     free(osc_quit_path);
+    free(osc_rate_path);
     free(osc_show_path);
     free(osc_update_path);
     free(osc_self_url);
