@@ -233,10 +233,6 @@ create_main_window (const char *tag)
     GtkWidget *menubar1;
     GtkWidget *file1;
     GtkWidget *file1_menu;
-#if !GTK_CHECK_VERSION(2, 0, 0)
-    GtkAccelGroup *file1_menu_accels;
-    GtkAccelGroup *help1_menu_accels;
-#endif
     GtkWidget *menu_import;
     GtkWidget *menu_export;
     GtkWidget *separator1;
@@ -319,9 +315,6 @@ create_main_window (const char *tag)
     gtk_object_set_data_full (GTK_OBJECT (main_window), "file1_menu", file1_menu,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_menu_item_set_submenu (GTK_MENU_ITEM (file1), file1_menu);
-#if !GTK_CHECK_VERSION(2, 0, 0)
-    file1_menu_accels = gtk_menu_ensure_uline_accel_group (GTK_MENU (file1_menu));
-#endif
 
     menu_import = gtk_menu_item_new_with_label ("Import Patch Bank...");
     gtk_widget_ref (menu_import);
@@ -374,9 +367,6 @@ create_main_window (const char *tag)
     gtk_object_set_data_full (GTK_OBJECT (main_window), "help1_menu", help1_menu,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_menu_item_set_submenu (GTK_MENU_ITEM (help1), help1_menu);
-#if !GTK_CHECK_VERSION(2, 0, 0)
-    help1_menu_accels = gtk_menu_ensure_uline_accel_group (GTK_MENU (help1_menu));
-#endif
 
     menu_about = gtk_menu_item_new_with_label ("About hexter");
     gtk_widget_ref (menu_about);

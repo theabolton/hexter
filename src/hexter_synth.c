@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004, 2009 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2011 Sean Bolton and others.
  *
  * Portions of this file may have come from Peter Hanappe's
  * Fluidsynth, copyright (C) 2003 Peter Hanappe and others.
@@ -20,6 +20,10 @@
  * Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301 USA.
  */
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -446,20 +450,60 @@ hexter_instance_update_volume(hexter_instance_t* instance)
 }
 
 /*
- * hexter_instance_update_fc
+ * hexter_instance_update_op_param
+ *
+ * Generic function to update operator parameters
+ *
  */
-void
-hexter_instance_update_fc(hexter_instance_t *instance, int opnum,
-                          signed int value)
+static void
+hexter_instance_update_op_param(hexter_instance_t *instance, int opnum,
+                                int param, signed int value)
 {
     int i;
     dx7_voice_t* voice;
-    int fc = value / 4;  /* frequency coarse is 0 to 31 */
+
+    /* scale the value */
+    switch(param){
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+        case 9:
+        case 10:
+        case 16:
+        case 19:
+            value = value * 100 / 16384;  /* 0 to 99 */
+            break;
+        case 11:
+        case 12:
+        case 14:
+            value = value * 4 / 16384;  /* 0 to 3 */
+            break;
+        case 13:
+        case 15:
+            value = value * 8 / 16384;  /* 0 to 7 */
+            break;
+        case 17:
+            value = value * 2 / 16384;  /* 0 or 1 */
+            break;
+        case 18:
+            value = value * 32 / 16384;  /* 0 to 31 */
+            break;
+        case 20:
+            value = value * 15 / 16384;  /* 0 to 14 */
+            break;
+    }
 
     /* update edit buffer */
     if (!pthread_mutex_trylock(&instance->patches_mutex)) {
 
-        instance->current_patch_buffer[((5 - opnum) * 21) + 18] = fc;
+        instance->current_patch_buffer[((5 - opnum) * 21) + param] =
+            value;
 
         pthread_mutex_unlock(&instance->patches_mutex);
     } else {
@@ -475,10 +519,119 @@ hexter_instance_update_fc(hexter_instance_t *instance, int opnum,
         if (voice->instance == instance && _PLAYING(voice)) {
             dx7_op_t *op = &voice->op[opnum];
 
-            op->coarse = fc;
-            dx7_op_recalculate_increment(instance, op);
+            /* set values */
+            switch (param) {
+                case 0:
+                    op->eg.base_rate[0] = value;
+                    break;
+                case 1:
+                    op->eg.base_rate[1] = value;
+                    break;
+                case 2:
+                    op->eg.base_rate[2] = value;
+                    break;
+                case 3:
+                    op->eg.base_rate[3] = value;
+                    break;
+                case 4:
+                    op->eg.base_level[0] = value;
+                    break;
+                case 5:
+                    op->eg.base_level[1] = value;
+                    break;
+                case 6:
+                    op->eg.base_level[2] = value;
+                    break;
+                case 7:
+                    op->eg.base_level[3] = value;
+                    break;
+                case 8:
+                    op->level_scaling_bkpoint = value;
+                    break;
+                case 9:
+                    op->level_scaling_l_depth = value;
+                    break;
+                case 10:
+                    op->level_scaling_r_depth = value;
+                    break;
+                case 11:
+                    op->level_scaling_l_curve = value;
+                    break;
+                case 12:
+                    op->level_scaling_r_curve = value;
+                    break;
+                case 13:
+                    op->rate_scaling = value;
+                    break;
+                case 14:
+                    op->amp_mod_sens = value;
+                    break;
+                case 15:
+                    op->velocity_sens = value;
+                    break;
+                case 16:
+                    op->output_level = value;
+                    break;
+                case 17:
+                    op->osc_mode = value;
+                    break;
+                case 18:
+                    op->coarse = value;
+                    break;
+                case 19:
+                    op->fine = value;
+                    break;
+                case 20:
+                    op->detune = value;
+                    break;
+            }
+
+            /* do recalculations */
+            switch (param) {
+                case 17:    /* osc mode */
+                case 18:    /* coarse */
+                case 19:    /* fine */
+                case 20:    /* detune */
+                    dx7_op_recalculate_increment(instance, op);
+                    break;
+                /* which other operator params need a recalc ?? */
+            }
         }
     }
+}
+
+/*
+ * hexter_instance_update_fc
+ */
+static inline void
+hexter_instance_update_fc(hexter_instance_t *instance, int opnum,
+                          signed int value)
+{
+    hexter_instance_update_op_param(instance, opnum, 18, value * 128);
+}
+
+/*
+ * hexter_instance_handle_nrpn
+ *
+ * Update operator parameters via NRPN 0-125.
+ */
+static void
+hexter_instance_handle_nrpn(hexter_instance_t *instance)
+{
+    int nrpn = instance->cc[MIDI_CTL_NONREG_PARM_NUM_MSB] * 128 +
+               instance->cc[MIDI_CTL_NONREG_PARM_NUM_LSB];
+    int value = instance->cc[MIDI_CTL_MSB_DATA_ENTRY] * 128 +
+                instance->cc[MIDI_CTL_LSB_DATA_ENTRY];
+
+    int opnum;
+    int op_param;
+
+    if (nrpn >= 126) return; /* for now we only support operator params */
+
+    opnum    = nrpn / 21;   /* 0 = OP6, 5 = OP1 */
+    op_param = nrpn - (21 * opnum);
+
+    hexter_instance_update_op_param(instance, 5 - opnum, op_param, value);
 }
 
 /*
@@ -511,6 +664,14 @@ hexter_instance_control_change(hexter_instance_t *instance, unsigned int param,
         instance->cc[param] = value;
         hexter_instance_all_notes_off(instance);
         return;
+    }
+
+    if (param == MIDI_CTL_REGIST_PARM_NUM_LSB ||
+        param == MIDI_CTL_REGIST_PARM_NUM_MSB) {
+
+        /* reset NRPN numbers on receipt of RPN */
+        instance->cc[MIDI_CTL_NONREG_PARM_NUM_LSB] = 127;
+        instance->cc[MIDI_CTL_NONREG_PARM_NUM_MSB] = 127;
     }
 
     if (instance->cc[param] == value)  /* do nothing if control value has not changed */
@@ -554,14 +715,20 @@ hexter_instance_control_change(hexter_instance_t *instance, unsigned int param,
                                   value);
         break;
 
+      /* handle NRPN as real-time parameter change */
+      case MIDI_CTL_MSB_DATA_ENTRY:
+      case MIDI_CTL_LSB_DATA_ENTRY:
+        if (instance->cc[MIDI_CTL_NONREG_PARM_NUM_MSB] != 127 &&
+            instance->cc[MIDI_CTL_NONREG_PARM_NUM_LSB] != 127) {
+            hexter_instance_handle_nrpn(instance);
+        }
+        break;
+
       /* what others should we respond to? */
 
       /* these we ignore (let the host handle):
        *  BANK_SELECT_MSB
        *  BANK_SELECT_LSB
-       *  DATA_ENTRY_MSB
-       *  NRPN_MSB
-       *  NRPN_LSB
        *  RPN_MSB
        *  RPN_LSB
        * (may want to eventually implement RPN (0, 0) Pitch Bend Sensitivity)
@@ -616,6 +783,8 @@ hexter_instance_init_controls(hexter_instance_t *instance)
     instance->pitch_wheel = 0;
     instance->pitch_bend = 0.0;
     instance->cc[MIDI_CTL_MSB_MAIN_VOLUME] = 127; /* full volume */
+    instance->cc[MIDI_CTL_NONREG_PARM_NUM_LSB] = 127; /* 'null' */
+    instance->cc[MIDI_CTL_NONREG_PARM_NUM_MSB] = 127; /* 'null' */
 
     hexter_instance_update_mod_wheel(instance);
     hexter_instance_update_breath(instance);

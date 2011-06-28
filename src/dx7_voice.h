@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004, 2009 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2011 Sean Bolton and others.
  *
  * Portions of this file may have come from Peter Hanappe's
  * Fluidsynth, copyright (C) 2003 Peter Hanappe and others.
@@ -35,12 +35,11 @@ struct _dx7_patch_t
     uint8_t data[128];  /* dx7_patch_t is packed patch data */
 };
 
+#ifndef HEXTER_USE_FLOATING_POINT
+
 #define FP_SHIFT         24
 #define FP_SIZE          (1<<FP_SHIFT)
 #define FP_MASK          (FP_SIZE-1)
-#define SINE_SHIFT       12
-#define SINE_SIZE        (1<<SINE_SHIFT)
-#define SINE_MASK        (SINE_SIZE-1)
 #define FP_TO_SINE_SHIFT (FP_SHIFT-SINE_SHIFT)
 #define FP_TO_SINE_SIZE  (1<<FP_TO_SINE_SHIFT)
 #define FP_TO_SINE_MASK  (FP_TO_SINE_SIZE-1)
@@ -49,14 +48,34 @@ struct _dx7_patch_t
 #define FP_TO_FLOAT(x)  ((float)(x) * (1.0f / (float)FP_SIZE))
 #define FP_TO_DOUBLE(x) ((double)(x) * (1.0 / (double)FP_SIZE))
 #define INT_TO_FP(x)    ((x) << FP_SHIFT)
+/* beware of using the next two with constants, they probably won't be optimized */
 #define FLOAT_TO_FP(x)  lrintf((x) * (float)FP_SIZE)
 #define DOUBLE_TO_FP(x) lrint((x) * (double)FP_SIZE)
 
-static inline int32_t
-fp_multiply(int32_t a, int32_t b)
-{
-    return ((int64_t)a * (int64_t)b) >> FP_SHIFT;
-}
+#define FP_MULTIPLY(a, b)     ((int32_t)(((int64_t)(a) * (int64_t)(b)) >> FP_SHIFT))
+#define FP_DIVIDE_CEIL(n, d)  (((n) + (d) - 1) / (d))
+#define FP_ABS(x)             (abs(x))
+#define FP_RAND()             (rand() & FP_MASK)
+
+#else /* HEXTER_USE_FLOATING_POINT */
+
+#define FP_TO_INT(x)        (lrintf(x))
+#define FP_TO_FLOAT(x)      (x)
+#define FP_TO_DOUBLE(x)     ((double)(x))
+#define INT_TO_FP(x)        ((float)(x))
+#define FLOAT_TO_FP(x)      (x)
+#define DOUBLE_TO_FP(x)     ((float)(x))
+
+#define FP_MULTIPLY(x, y)     ((x) * (y))
+#define FP_DIVIDE_CEIL(n, d)  (lrintf((n) / (d) + 0.5f));
+#define FP_ABS(x)             (fabsf(x))
+#define FP_RAND()             ((float)rand() / (float)RAND_MAX)
+
+#endif /* ! HEXTER_USE_FLOATING_POINT */
+
+#define SINE_SHIFT       12
+#define SINE_SIZE        (1<<SINE_SHIFT)
+#define SINE_MASK        (SINE_SIZE-1)
 
 enum dx7_eg_mode {
     DX7_EG_FINISHED,
@@ -72,15 +91,15 @@ struct _dx7_op_eg_t   /* operator (amplitude) envelope generator */
     uint8_t    rate[4];
     uint8_t    level[4];
 
-    int        mode;        /* enum dx7_eg_mode (finished, running, sustaining, constant) */
-    int        phase;       /* 0, 1, 2, or 3 */
-    int32_t    value;
-    int32_t    duration;    /* op envelope durations are in frames */
-    int32_t    increment;
-    int32_t    target;
-    int        in_precomp;
-    int32_t    postcomp_duration;
-    int32_t    postcomp_increment;
+    int          mode;        /* enum dx7_eg_mode (finished, running, sustaining, constant) */
+    int          phase;       /* 0, 1, 2, or 3 */
+    dx7_sample_t value;
+    int32_t      duration;    /* op envelope durations are in frames */
+    dx7_sample_t increment;
+    dx7_sample_t target;
+    int          in_precomp;
+    int32_t      postcomp_duration;
+    dx7_sample_t postcomp_increment;
 };
 
 struct _dx7_pitch_eg_t   /* pitch envelope generator */
@@ -118,9 +137,9 @@ enum dx7_ops {
 
 struct _dx7_op_t   /* operator */
 {
-    double      frequency;
-    uint32_t    phase;
-    uint32_t    phase_increment;
+    double        frequency;
+    dx7_sample_t  phase;
+    dx7_sample_t  phase_increment;
 
     dx7_op_eg_t eg;
 		
@@ -179,8 +198,8 @@ struct _dx7_voice_t
     double           pitch_mod_depth_mods;
 
     uint8_t          algorithm;
-    int32_t          feedback;
-    int32_t          feedback_multiplier;
+    dx7_sample_t     feedback;
+    dx7_sample_t     feedback_multiplier;
     uint8_t          osc_key_sync;
 
     uint8_t          lfo_speed;
@@ -195,28 +214,28 @@ struct _dx7_voice_t
 
     /* modulation */
     int              mods_serial;
-    int32_t          amp_mod_env_value;
-    unsigned long    amp_mod_env_duration;
-    int32_t          amp_mod_env_increment;
-    int32_t          amp_mod_env_target;
-    int32_t          amp_mod_lfo_mods_value;
-    unsigned long    amp_mod_lfo_mods_duration;
-    int32_t          amp_mod_lfo_mods_increment;
-    int32_t          amp_mod_lfo_mods_target;
-    int32_t          amp_mod_lfo_amd_value;
-    unsigned long    amp_mod_lfo_amd_duration;
-    int32_t          amp_mod_lfo_amd_increment;
-    int32_t          amp_mod_lfo_amd_target;
+    dx7_sample_t     amp_mod_env_value;
+    int32_t          amp_mod_env_duration;
+    dx7_sample_t     amp_mod_env_increment;
+    dx7_sample_t     amp_mod_env_target;
+    dx7_sample_t     amp_mod_lfo_mods_value;
+    int32_t          amp_mod_lfo_mods_duration;
+    dx7_sample_t     amp_mod_lfo_mods_increment;
+    dx7_sample_t     amp_mod_lfo_mods_target;
+    dx7_sample_t     amp_mod_lfo_amd_value;
+    int32_t          amp_mod_lfo_amd_duration;
+    dx7_sample_t     amp_mod_lfo_amd_increment;
+    dx7_sample_t     amp_mod_lfo_amd_target;
     int              lfo_delay_segment;
-    int32_t          lfo_delay_value;
-    unsigned long    lfo_delay_duration;
-    int32_t          lfo_delay_increment;
+    dx7_sample_t     lfo_delay_value;
+    int32_t          lfo_delay_duration;
+    dx7_sample_t     lfo_delay_increment;
 
     /* volume */
     float            last_port_volume;
     unsigned long    last_cc_volume;
     float            volume_value;
-    unsigned long    volume_duration;
+    int32_t          volume_duration;
     float            volume_increment;
     float            volume_target;
 };
@@ -227,24 +246,17 @@ struct _dx7_voice_t
 #define _RELEASED(voice)   ((voice)->status == DX7_VOICE_RELEASED)
 #define _AVAILABLE(voice)  ((voice)->status == DX7_VOICE_OFF)
 
-extern int32_t  dx7_voice_sin_table[SINE_SIZE + 1];
+extern dx7_sample_t  dx7_voice_sin_table[SINE_SIZE + 1];
 
-extern uint8_t  dx7_voice_carriers[32];
-extern float    dx7_voice_carrier_count[32];
+extern uint8_t       dx7_voice_carriers[32];
+extern float         dx7_voice_carrier_count[32];
 
-extern float    dx7_voice_eg_rate_rise_duration[128];
-extern float    dx7_voice_eg_rate_decay_duration[128];
-extern float    dx7_voice_eg_rate_rise_percent[128];
-extern float    dx7_voice_eg_rate_decay_percent[128];
-
-extern int32_t *dx7_voice_eg_ol_to_mod_index;
-extern int32_t *dx7_voice_eg_ol_to_amp;
-extern float    dx7_voice_velocity_ol_adjustment[128];
-extern double   dx7_voice_pitch_level_to_shift[128];
-extern float    dx7_voice_lfo_frequency[128];
-extern float    dx7_voice_pms_to_semitones[8];
-extern float    dx7_voice_amd_to_ol_adjustment[100];
-extern float    dx7_voice_mss_to_ol_adjustment[16];
+extern dx7_sample_t *dx7_voice_eg_ol_to_mod_index;
+extern float         dx7_voice_velocity_ol_adjustment[128];
+extern float         dx7_voice_lfo_frequency[128];
+extern float         dx7_voice_pms_to_semitones[8];
+extern float         dx7_voice_amd_to_ol_adjustment[100];
+extern float         dx7_voice_mss_to_ol_adjustment[16];
 
 /* dx7_voice.c */
 dx7_voice_t *dx7_voice_new(void);

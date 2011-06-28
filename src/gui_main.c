@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004, 2009 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2011 Sean Bolton and others.
  *
  * Portions of this file may have come from Chris Cannam and Steve
  * Harris's public domain DSSI example code.
@@ -311,7 +311,7 @@ main(int argc, char *argv[])
     gtk_set_locale();
     gtk_init(&argc, &argv);
 
-    if (!strcmp(argv[1], "-test")) {
+    if (argc > 1 && !strcmp(argv[1], "-test")) {
         gui_test_mode = 1;
         test_argv[0] = argv[0];
         test_argv[1] = "osc.udp://localhost:9/test/mode";
@@ -339,7 +339,7 @@ main(int argc, char *argv[])
     osc_midi_path      = osc_build_path(path, "/midi");
     osc_program_path   = osc_build_path(path, "/program");
     osc_quit_path      = osc_build_path(path, "/quit");
-    osc_quit_path      = osc_build_path(path, "/sample-rate");
+    osc_rate_path      = osc_build_path(path, "/sample-rate");
     osc_show_path      = osc_build_path(path, "/show");
     osc_update_path    = osc_build_path(path, "/update");
 

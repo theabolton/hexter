@@ -1,6 +1,6 @@
 /* Yamaha DX7 / TX7 Editor/Librarian
  *
- * Copyright (C) 1991, 1995, 1997, 1998, 2004, 2009 Sean Bolton.
+ * Copyright (C) 1991, 1995, 1997, 1998, 2004, 2009, 2011 Sean Bolton.
  *
  * This is an ncurses-based patch editor for the Yamaha DX7 and
  * TX7.  It is provided as-is, without any documentation, and
@@ -34,6 +34,8 @@
  * 20040207 Sean Bolton - add next/previous voice commands to edit mode
  * 20090102 Sean Bolton - incorporated Martin Tarenskeen's patch loading
  *                        enhancements
+ * 20110215 Sean Bolton - incorporated more patch loading enhancements
+ *                        from Martin Tarenskeen.
  */
 
 /* Need to do:                              */
@@ -43,7 +45,7 @@
 /*   a search option would be nice          */
 /*   show channel/instrument on display     */
 
-#define VERSIONSTRING "0.92s"
+#define VERSIONSTRING "0.93s"
 
 /* Undefine USE_ALSA_MIDI to just write to /dev/midi */
 #define USE_ALSA_MIDI 1
@@ -80,11 +82,11 @@ char FNameBuff[MAXPATH]="\0";
 
 /* ==== Buffers ==== */
 
-#define VSIZEPACKED     128
-#define VSIZEUNPACKED   155
-#define DEFAULTVOICES   8192
-#define DUMPSIZE_SINGLE 155+8
-#define DUMPSIZE_BULK   4096+8
+#define DEFAULTVOICES                8192
+#define DX7_VOICE_SIZE_PACKED         128
+#define DX7_VOICE_SIZE_UNPACKED       155
+#define DX7_DUMP_SIZE_VOICE_SINGLE  155+8
+#define DX7_DUMP_SIZE_VOICE_BULK   4096+8
 
 int Voices = DEFAULTVOICES;
 
@@ -150,6 +152,11 @@ char TXChannel = 0;  /* 0-15! */
 #define VOICEPARMS      146
 #define VOICEPARMMAX    145
 
+#ifdef USE_CALCED_CURSOR_MOVES
+#define VOICEPARMS_X_SPAN  57
+#define VOICEPARMS_Y_SPAN  18
+#endif
+
 int ve_Cursor = 0;
 int ve_OpSelect = 63;
 
@@ -177,7 +184,7 @@ struct _veParm {
     UBYTE   Offset;
     UBYTE   X;
     UBYTE   Y;
-    UBYTE   Up;
+    UBYTE   Up;  /* -FIX- Up and Down are obsolete with calc'ed cursor moves */
     UBYTE   Down;
 } veParm[VOICEPARMS] = {
 /*     T,  Off,  X,  Y,   U,   D */
@@ -587,7 +594,7 @@ NoteText(int note)
 UBYTE *
 voiceAddr(int voice)
 {
- /* return voice*VSIZEPACKED+VoiceData; */
+ /* return voice*DX7_VOICE_SIZE_PACKED+VoiceData; */
     return (voice << 7)     +VoiceData;
 }
 
@@ -661,7 +668,7 @@ UBYTE InitVoiceUnpacked[155] = {
 void
 EraseVoice(int voice)
 {
-    memcpy(voiceAddr(voice), InitVoice, VSIZEPACKED);
+    memcpy(voiceAddr(voice), InitVoice, DX7_VOICE_SIZE_PACKED);
 }
 
 void
@@ -718,15 +725,15 @@ BuffInit(void)  /* returns TRUE if successful */
     int i;
 
     BuffTerm();
-    /* calculate buffer size from number of voices * VSIZEPACKED plus a bulk
+    /* calculate buffer size from number of voices * DX7_VOICE_SIZE_PACKED plus a bulk
        dump buffer and a single dump buffer */
-    BufferLength = Voices * VSIZEPACKED + DUMPSIZE_BULK + DUMPSIZE_SINGLE;
+    BufferLength = Voices * DX7_VOICE_SIZE_PACKED + DX7_DUMP_SIZE_VOICE_BULK + DX7_DUMP_SIZE_VOICE_SINGLE;
     if (!(Buffer = malloc(BufferLength))) {
         return FALSE;
     }
     VoiceData = Buffer;
-    BulkDump = VoiceData + Voices * VSIZEPACKED;
-    SingleDump = BulkDump + DUMPSIZE_BULK;  /* must be last for alignment */
+    BulkDump = VoiceData + Voices * DX7_VOICE_SIZE_PACKED;
+    SingleDump = BulkDump + DX7_DUMP_SIZE_VOICE_BULK;  /* must be last for alignment */
     SingleData = SingleDump + 6;
     /* Init the buffers */
     for (i = 0; i < Voices; EraseVoice(i++));
@@ -989,8 +996,8 @@ ChecksumSingle(void)
     int sum = 0;
     int i;
 
-    for (i = 0; i < VSIZEUNPACKED; sum -= SingleData[i++]);
-    SingleData[VSIZEUNPACKED] = sum & 0x7F;
+    for (i = 0; i < DX7_VOICE_SIZE_UNPACKED; sum -= SingleData[i++]);
+    SingleData[DX7_VOICE_SIZE_UNPACKED] = sum & 0x7F;
 }
 
 void
@@ -1006,8 +1013,8 @@ PutUnpacked(void)
     sd[3] = 0;
     sd[4] = 0x01;
     sd[5] = 0x1B;
-    sd[DUMPSIZE_SINGLE - 1] = 0xF7;
-    PutMidiMsg(sd, DUMPSIZE_SINGLE);
+    sd[DX7_DUMP_SIZE_VOICE_SINGLE - 1] = 0xF7;
+    PutMidiMsg(sd, DX7_DUMP_SIZE_VOICE_SINGLE);
 }
 
 void
@@ -1034,9 +1041,9 @@ PutBank(int voice)
         bd[4] = 0x10;
         bd[5] = 0x00;
         for(p2 = bd + 6, pe = p2 + 4096; p2 < pe; chksum -= *p2++ = *p1++);
-        bd[DUMPSIZE_BULK - 2] = chksum & 0x7f;
-        bd[DUMPSIZE_BULK - 1] = 0xF7;
-        PutMidiMsg(bd, DUMPSIZE_BULK);
+        bd[DX7_DUMP_SIZE_VOICE_BULK - 2] = chksum & 0x7f;
+        bd[DX7_DUMP_SIZE_VOICE_BULK - 1] = 0xF7;
+        PutMidiMsg(bd, DX7_DUMP_SIZE_VOICE_BULK);
     } else {
         beep();
     }
@@ -1093,6 +1100,8 @@ Load(char *filename)
     int patchstart;
     int midshift;
     int datastart;
+    int i;
+    int op;
 
     /* this needs to 1) open and parse the file, 2a) if it's good, copy as
      * many patches as will fit into VoiceData beginning at Voice_Cursor,
@@ -1119,7 +1128,7 @@ Load(char *filename)
         fclose(fp);
         LoadError(filename, "patch file is too large");
         return 0;
-    } else if (filelength < 128) {
+    } else if (filelength < DX7_VOICE_SIZE_PACKED) {
         fclose (fp);
         LoadError(filename, "patch file is too small");
         return 0;
@@ -1149,7 +1158,7 @@ Load(char *filename)
     else
         midshift = 0;
 
-    /* scan SysEx or MIDI file for SysEx header */
+    /* scan SysEx or MIDI file for SysEx header(s) */
     count = 0;
     datastart = 0;
     for (patchstart = 0; patchstart + midshift + 5 < filelength; patchstart++) {
@@ -1162,9 +1171,10 @@ Load(char *filename)
             patchstart + 4103 + midshift < filelength &&
             raw_patch_data[patchstart + 4103 + midshift] == 0xf7) {  /* DX7 32 voice dump */
 
-            count = 32;
-            datastart = patchstart + 6 + midshift;
-            break;
+            memmove(raw_patch_data + count * DX7_VOICE_SIZE_PACKED,
+                    raw_patch_data + patchstart + 6 + midshift, 4096);
+            count += 32;
+            patchstart += 4104;
 
         } else if (raw_patch_data[patchstart] == 0xf0 && 
                    raw_patch_data[patchstart + midshift + 1] == 0x43 && 
@@ -1174,12 +1184,13 @@ Load(char *filename)
                    patchstart + midshift + 162 < filelength &&
                    raw_patch_data[patchstart + midshift + 162] == 0xf7) {  /* DX7 single voice (edit buffer) dump */
 
-            _Pack(raw_patch_data,
-                  raw_patch_data + patchstart + midshift + 6);
+            _Pack ((UBYTE *)errbuf,  /* pack to errbuf to avoid a collision */
+                   raw_patch_data + patchstart + midshift + 6);
+            memcpy(raw_patch_data + count * DX7_VOICE_SIZE_PACKED,
+                   errbuf, DX7_VOICE_SIZE_PACKED);
 
-            datastart = 0;
-            count = 1;
-            break;
+            count += 1;
+            patchstart += DX7_DUMP_SIZE_VOICE_SINGLE;
         }
     }
             
@@ -1187,12 +1198,20 @@ Load(char *filename)
     /* assume the user knows what she is doing ;-) */
 
     if (count == 0)
-        count = filelength / 128;
+        count = filelength / DX7_VOICE_SIZE_PACKED;
 
     /* Dr.T TX7 file needs special treatment */
     filename_length = strlen (filename);
     if ((!strcmp(filename + filename_length - 4, ".TX7") ||
          !strcmp(filename + filename_length - 4, ".tx7")) && filelength == 8192) {
+
+        count = 32;
+        filelength = 4096;
+    }
+
+    /* Steinberg Synthworks DX7 SND */
+    if ((!strcmp (filename + filename_length - 4, ".SND") ||
+         !strcmp (filename + filename_length - 4, ".snd")) && filelength == 5216) {
 
         count = 32;
         filelength = 4096;
@@ -1208,14 +1227,84 @@ Load(char *filename)
         datastart = 0x60f;
     }
 
-    /* Double SySex bank */
-    if (filelength == 8208 &&
-        raw_patch_data[4104] == 0xf0 && raw_patch_data[4104 + 4103] == 0xf7) {
+    /* Yamaha DX200 editor .DX2 file */
+    if ((!strcmp (filename + filename_length - 4, ".DX2") ||
+         !strcmp (filename + filename_length - 4, ".dx2"))
+        && filelength == 326454)
+      {
+          memmove (raw_patch_data + 16384, raw_patch_data + 34, 128 * 381);
+          for (count = 0; count < 128; count++)
+            {
+                for (op = 0; op < 6; op++)
+                  {
+                      for (i = 0; i < 8; i++)
+                        {
+                            raw_patch_data[17 * (5 - op) + i + 128 * count] =
+                                raw_patch_data[16384 + 35 * op + 76 + i + 381 * count];
+                        }
+                      raw_patch_data[17 * (5 - op) + 8 + 128 * count] =
+                          raw_patch_data[16384 + 35 * op + 84 + 381 * count] - 21;
+                      raw_patch_data[17 * (5 - op) + 9 + 128 * count] =
+                          raw_patch_data[16384 + 35 * op + 87 + 381 * count];
+                      raw_patch_data[17 * (5 - op) + 10 + 128 * count] =
+                          raw_patch_data[16384 + 35 * op + 88 + 381 * count];
+                      raw_patch_data[17 * (5 - op) + 11 + 128 * count] =
+                          raw_patch_data[16384 + 35 * op + 85 + 381 * count] +
+                          raw_patch_data[16384 + 35 * op + 86 + 381 * count] * 4;
+                      raw_patch_data[17 * (5 - op) + 12 + 128 * count] =
+                          raw_patch_data[16384 + 35 * op + 89 + 381 * count] +
+                          raw_patch_data[16384 + 35 * op + 75 + 381 * count] * 8;
+                      if (raw_patch_data[16384 + 35 * op + 71 + 381 * count] > 3)
+                          raw_patch_data[16384 + 35 * op + 71 + 381 * count] = 3;
+                      raw_patch_data[17 * (5 - op) + 13 + 128 * count] =
+                          raw_patch_data[16384 + 35 * op + 71 + 381 * count] / 2 +
+                          raw_patch_data[16384 + 35 * op + 91 + 381 * count] * 4;
+                      raw_patch_data[17 * (5 - op) + 14 + 128 * count] =
+                          raw_patch_data[16384 + 35 * op + 90 + 381 * count];
+                      raw_patch_data[17 * (5 - op) + 15 + 128 * count] =
+                          raw_patch_data[16384 + 35 * op + 72 + 381 * count] +
+                          raw_patch_data[16384 + 35 * op + 73 + 381 * count] * 2;
+                      raw_patch_data[17 * (5 - op) + 16 + 128 * count] =
+                          raw_patch_data[16384 + 35 * op + 74 + 381 * count];
+                  }
+                for (i = 0; i < 4; i++)
+                  {
+                      raw_patch_data[102 + i + 128 * count] =
+                          raw_patch_data[16384 + 26 + i + 381 * count];
+                  }
+                for (i = 0; i < 4; i++)
+                  {
+                      raw_patch_data[106 + i + 128 * count] =
+                          raw_patch_data[16384 + 32 + i + 381 * count];
+                  }
+                raw_patch_data[110 + 128 * count] =
+                    raw_patch_data[16384 + 17 + 381 * count];
+                raw_patch_data[111 + 128 * count] =
+                    raw_patch_data[16384 + 18 + 381 * count] +
+                    raw_patch_data[16384 + 38 + 381 * count] * 8;
+                for (i = 0; i < 4; i++)
+                  {
+                      raw_patch_data[112 + i + 128 * count] =
+                          raw_patch_data[16384 + 20 + i + 381 * count];
+                  }
+                raw_patch_data[116 + 128 * count] =
+                    raw_patch_data[16384 + 24 + 381 * count] +
+                    raw_patch_data[16384 + 19 + 381 * count] * 2 +
+                    raw_patch_data[16384 + 25 + 381 * count] * 16;
+                raw_patch_data[117 + 128 * count] =
+                    raw_patch_data[16384 + 37 + 381 * count] - 36;
+                for (i = 0; i < 10; i++)
+                  {
+                      raw_patch_data[118 + i + 128 * count] =
+                          raw_patch_data[16384 + i + 381 * count];
+                  }
+            }
 
-        memcpy(raw_patch_data + 4102, raw_patch_data + 4110, 4096);
-        count = 64;
-        datastart = 6;
-    }
+          count = 128;
+          filelength = 16384;
+          datastart = 0;
+
+      }
 
     /* finally, copy patchdata to the right location */
     if (count > Voices - Voice_Cursor) {  /* if ( voices-in-file > voices-to-end-of-buffer ) */
@@ -1225,7 +1314,7 @@ Load(char *filename)
         count = Voices - Voice_Cursor;
     }
 
-    memcpy(voiceAddr(Voice_Cursor), raw_patch_data + datastart, 128 * count);
+    memcpy(voiceAddr(Voice_Cursor), raw_patch_data + datastart, DX7_VOICE_SIZE_PACKED * count);
     free (raw_patch_data);
     cprintf(" File '%s' loaded.\n", filename);
     return count;
@@ -1238,7 +1327,7 @@ Save(int vstart, int vend)  /* range is inclusive, filename in FNameBuff */
     long flength;
 
     if ((fh = fopen(FNameBuff, "wb")) != 0) {
-        flength = (vend - vstart + 1) * VSIZEPACKED;
+        flength = (vend - vstart + 1) * DX7_VOICE_SIZE_PACKED;
 	if (flength != fwrite(voiceAddr(vstart), 1, flength, fh)) {
             cprintf("Save - Error writing file '%s':\n", FNameBuff);
             cprintf(" '%s'!\n", strerror(errno));
@@ -1611,45 +1700,145 @@ void
 ve_CurUp(void)
 {
     int oldcursor = ve_Cursor;
+#ifndef USE_CALCED_CURSOR_MOVES
     ve_Cursor = veParm[ve_Cursor].Up;
     ve_printParm(oldcursor);
     ve_printParm(ve_Cursor);
+#else /* USE_CALCED_CURSOR_MOVES */
+    int i, dx, dy, distance,
+        best = -1,
+        bestdistance = 1000;
+
+    /* try to find the closest parm in the 'up' direction */
+    for (i = 0; i <= VOICEPARMMAX; i++) {
+        dx = abs(veParm[ve_Cursor].X - veParm[i].X);
+        dy = (veParm[ve_Cursor].Y - 1) - veParm[i].Y;
+        if (dy < 0)
+            dy += VOICEPARMS_Y_SPAN + 2; /* wrap */
+        dy = dy * 5 / 2; /* prefer something <2.5 spaces away horizontally to 1 space vertically */
+        distance = dx + dy;
+        if (bestdistance > distance) {
+            bestdistance = distance;
+            best = i;
+        }
+    }
+    if (best >= 0) {
+        ve_Cursor = best;
+        ve_printParm(oldcursor);
+        ve_printParm(ve_Cursor);
+    }
+#endif /* USE_CALCED_CURSOR_MOVES */
 }
 
 void
 ve_CurDown(void)
 {
     int oldcursor = ve_Cursor;
+#ifndef USE_CALCED_CURSOR_MOVES
     ve_Cursor = veParm[ve_Cursor].Down;
     ve_printParm(oldcursor);
     ve_printParm(ve_Cursor);
+#else /* USE_CALCED_CURSOR_MOVES */
+    int i, dx, dy, distance,
+        best = -1,
+        bestdistance = 1000;
+
+    /* try to find the closest parm in the 'down' direction */
+    for (i = 0; i <= VOICEPARMMAX; i++) {
+        dx = abs(veParm[i].X - veParm[ve_Cursor].X);
+        dy = veParm[i].Y - (veParm[ve_Cursor].Y + 1);
+        if (dy < 0)
+            dy += VOICEPARMS_Y_SPAN + 2; /* wrap */
+        dy = dy * 5 / 2; /* prefer something <2.5 spaces away horizontally to 1 space vertically */
+        distance = dx + dy;
+        if (bestdistance > distance) {
+            bestdistance = distance;
+            best = i;
+        }
+    }
+    if (best >= 0) {
+        ve_Cursor = best;
+        ve_printParm(oldcursor);
+        ve_printParm(ve_Cursor);
+    }
+#endif /* USE_CALCED_CURSOR_MOVES */
 }
 
 void
 ve_CurRight(void)
 {
     int oldcursor = ve_Cursor;
+#ifndef USE_CALCED_CURSOR_MOVES
     if(++ve_Cursor > VOICEPARMMAX) ve_Cursor = 0;
     ve_printParm(oldcursor);
     ve_printParm(ve_Cursor);
+#else /* USE_CALCED_CURSOR_MOVES */
+    int i, dx, dy, distance,
+        best = -1,
+        bestdistance = 1000;
+
+    /* try to find the closest parm in the 'right' direction */
+    for (i = 0; i <= VOICEPARMMAX; i++) {
+        dx = veParm[i].X - (veParm[ve_Cursor].X + 2);
+        if (dx < 0)
+            dx += VOICEPARMS_X_SPAN + 4; /* wrap */
+        dy = abs(veParm[i].Y - veParm[ve_Cursor].Y);
+        dy = dy * 12; /* prefer something <8 spaces away horizontally to 1 space vertically */
+        distance = dx + dy;
+        if (bestdistance > distance) {
+            bestdistance = distance;
+            best = i;
+        }
+    }
+    if (best >= 0) {
+        ve_Cursor = best;
+        ve_printParm(oldcursor);
+        ve_printParm(ve_Cursor);
+    }
+#endif /* USE_CALCED_CURSOR_MOVES */
 }
 
 void
 ve_CurLeft(void)
 {
     int oldcursor = ve_Cursor;
+#ifndef USE_CALCED_CURSOR_MOVES
     if(ve_Cursor)
         ve_Cursor--;
     else
         ve_Cursor = VOICEPARMMAX;
     ve_printParm(oldcursor);
     ve_printParm(ve_Cursor);
+#else /* USE_CALCED_CURSOR_MOVES */
+    int i, dx, dy, distance,
+        best = -1,
+        bestdistance = 1000;
+
+    /* try to find the closest parm in the 'left' direction */
+    for (i = 0; i <= VOICEPARMMAX; i++) {
+        dx = (veParm[ve_Cursor].X - 2) - veParm[i].X;
+        if (dx < 0)
+            dx += VOICEPARMS_X_SPAN + 4; /* wrap */
+        dy = abs(veParm[i].Y - veParm[ve_Cursor].Y);
+        dy = dy * 12; /* prefer something <8 spaces away horizontally to 1 space vertically */
+        distance = dx + dy;
+        if (bestdistance > distance) {
+            bestdistance = distance;
+            best = i;
+        }
+    }
+    if (best >= 0) {
+        ve_Cursor = best;
+        ve_printParm(oldcursor);
+        ve_printParm(ve_Cursor);
+    }
+#endif /* USE_CALCED_CURSOR_MOVES */
 }
 
 void
 ve_Erase(void)
 {
-    memcpy(SingleData, InitVoiceUnpacked, VSIZEUNPACKED);
+    memcpy(SingleData, InitVoiceUnpacked, DX7_VOICE_SIZE_UNPACKED);
     // erase();
     // ve_SetScreen();
     ve_DoScreen();
@@ -2171,7 +2360,7 @@ LBA_Copy(void)
 #endif
     memmove(voiceAddr(Voice_Cursor),
 	    voiceAddr(Voice_BStart),
-           min(Voice_BEnd - Voice_BStart + 1, Voices - Voice_Cursor) * VSIZEPACKED);
+           min(Voice_BEnd - Voice_BStart + 1, Voices - Voice_Cursor) * DX7_VOICE_SIZE_PACKED);
     CancelBlock();
 }
 
@@ -2194,7 +2383,7 @@ LibDelete(void)
     if (Voices > Voice_BEnd + 1)
         memmove(voiceAddr(Voice_BStart),
 		voiceAddr(Voice_BEnd + 1),
-               (Voices - Voice_BEnd - 1) * VSIZEPACKED);
+               (Voices - Voice_BEnd - 1) * DX7_VOICE_SIZE_PACKED);
     for (i = Voices - Voice_BEnd + Voice_BStart - 1; i < Voices; EraseVoice(i++));
     CancelBlock();
 }
@@ -2236,9 +2425,9 @@ LBA_Move(void)  /* swap patches, overlapping ranges CF! */
             (i <= Voice_BEnd) && (Voice_Cursor + i - Voice_BStart < Voices); i++) {
         v1=voiceAddr(i);
         v2=voiceAddr(Voice_Cursor + i - Voice_BStart);
-        memmove(SingleData, v1, VSIZEPACKED);
-        memmove(v1, v2,         VSIZEPACKED);
-        memmove(v2, SingleData, VSIZEPACKED);
+        memmove(SingleData, v1, DX7_VOICE_SIZE_PACKED);
+        memmove(v1, v2,         DX7_VOICE_SIZE_PACKED);
+        memmove(v2, SingleData, DX7_VOICE_SIZE_PACKED);
     }
     CancelBlock();
 }
@@ -2319,7 +2508,7 @@ LibSort(void)
     SetBlock();
     if (Voice_BStart != Voice_BEnd) {
         qsort(voiceAddr(Voice_BStart), Voice_BEnd - Voice_BStart + 1,
-              VSIZEPACKED, (int (*)())_LibSortCmp);
+              DX7_VOICE_SIZE_PACKED, (int (*)())_LibSortCmp);
     }
     CancelBlock();
 }
@@ -2345,8 +2534,18 @@ LibSortPatch(void)
     SetBlock();
     if (Voice_BStart != Voice_BEnd) {
         qsort(voiceAddr(Voice_BStart), Voice_BEnd - Voice_BStart + 1,
-              VSIZEPACKED, (int (*)())_LibSortCmpPatch);
+              DX7_VOICE_SIZE_PACKED, (int (*)())_LibSortCmpPatch);
     }
+/* #define SORT_PATCH_ERASE_DUPLICATES */
+#ifdef SORT_PATCH_ERASE_DUPLICATES
+    {
+        int i;
+        for (i = Voice_BEnd - 1; i >= Voice_BStart; i--) {
+            if (memcmp(voiceAddr(i), voiceAddr(i + 1), 118) == 0)
+                EraseVoice(i + 1);
+        }
+    }
+#endif
     CancelBlock();
 }
 

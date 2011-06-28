@@ -1023,10 +1023,10 @@ rebuild_patches_clist(void)
         dx7_voice_copy_name(name, &patches[i]);
         gtk_clist_append(GTK_CLIST(patches_clist), data);
     }
-#if GTK_CHECK_VERSION(2, 0, 0)
+
     /* kick GTK+ 2.4.x in the pants.... */
     gtk_signal_emit_by_name (GTK_OBJECT (patches_clist), "check-resize");
-#endif    
+
     gtk_clist_thaw(GTK_CLIST(patches_clist));
 }
 

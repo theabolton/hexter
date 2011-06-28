@@ -1,3 +1,35 @@
+20110628 CVS commit smbolton (0.6.9.0)
+
+* MIDI non-registered parameters (NRPNs) can now be used to change
+    any of the operator parameters for a plugin instance's current
+    patch on-the-fly. Thanks to Jamie Bullock for contributing this
+    code.
+
+* It is now possible to ./configure hexter to build the GTK+ user
+    interface, the text-mode UI, both, or neither (again, thanks to
+    Jamie).
+
+* The GTK+ GUI now requires GTK+ 2.4 or later.
+
+* hexter may now be built to use floating-point math in its audio
+    rendering. There is a new '--enable-floating-point' ./configure
+    option, and a simple test harness in the fptest/ directory.
+
+* Both the hexter GUI and tx_edit include even more patch loading
+    enhancements from Martin Tarenskeen.
+
+* The synthesis code has been simplified, so the once-separate car()
+    and mod() functions are now just a single op(), which means less
+    cache pressure for both code and data.
+
+* There should be some other minor speed-ups as well: removed a
+    bunch of slow unsigned to float casts, and fixed some constant
+    expressions that were not being optimized.
+
+* Oops. GUI 'sample-rate' method broke 'quit'.
+
+* GUI no longer segfaults if started with no arguments.
+
 20090103 version 0.6.2
 
 * Silently ignore 'sample-rate' method.
@@ -35,7 +67,7 @@
     was abandoned with version 0.6.1.
 
 * Implemented the LFO, amplitude modulation and pitch modulation
-    (many thanks to Jamie Bullock)!
+    (many thanks to Jamie Bullock!)
 
 * Added TX7-style performance parameters, allowing configuration
     from the GUI of pitch bend range, portamento time, and

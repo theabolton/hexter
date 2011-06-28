@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004, 2009 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2011 Sean Bolton and others.
  *
  * Portions of this file may have come from Juan Linietsky's
  * rx-saturno, copyright (C) 2002 by Juan Linietsky.
@@ -23,6 +23,10 @@
  * Boston, MA 02110-1301 USA.
  */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #define _BSD_SOURCE    1
 #define _SVID_SOURCE   1
 #define _ISOC99_SOURCE 1
@@ -34,108 +38,105 @@
 #include "hexter_synth.h"
 #include "dx7_voice.h"
 
-static inline int32_t
-dx7_op_calculate_carrier(int32_t eg_value, uint32_t phase)
+static inline dx7_sample_t
+dx7_op_calculate_operator(dx7_sample_t eg_value, dx7_sample_t phase)
 {
-    int32_t index, amp, out;
-
-    /* use eg_value to look up the amplitude, with interpolation */
-    index = FP_TO_INT(eg_value);
-    amp = dx7_voice_eg_ol_to_amp[index];
-    amp += fp_multiply(dx7_voice_eg_ol_to_amp[index + 1] - amp,
-                       eg_value & FP_MASK);
-
-    /* use phase to look up the oscillator output, with interpolation */
-    index = (phase >> FP_TO_SINE_SHIFT) & SINE_MASK;
-    out = dx7_voice_sin_table[index];
-    out += (((int64_t)(dx7_voice_sin_table[index + 1] - out) *
-             (int64_t)(phase & FP_TO_SINE_MASK)) >>
-            (FP_SHIFT + FP_TO_SINE_SHIFT));
-
-    /* return the product of amplitude and oscillator output */
-    return fp_multiply(amp, out);
-}
-
-static inline int32_t
-dx7_op_calculate_carrier_saving_feedback(dx7_voice_t *voice, int32_t eg_value,
-                                         uint32_t phase)
-{
-    int32_t index, amp, out;
-    int64_t out64;
-
-    /* use eg_value to look up the amplitude, with interpolation */
-    index = FP_TO_INT(eg_value);
-    amp = dx7_voice_eg_ol_to_amp[index];
-    amp += fp_multiply(dx7_voice_eg_ol_to_amp[index + 1] - amp,
-                       eg_value & FP_MASK);
-
-    /* use phase to look up the oscillator output, with interpolation */
-    index = (phase >> FP_TO_SINE_SHIFT) & SINE_MASK;
-    out = dx7_voice_sin_table[index];
-    out64 = out + 
-            (((int64_t)(dx7_voice_sin_table[index + 1] - out) *
-              (int64_t)(phase & FP_TO_SINE_MASK)) >>
-             (FP_SHIFT + FP_TO_SINE_SHIFT));
-
-    /* save that output, scaled by our eg level, feedback amount, and a
-     * constant, as our feedback modulation index */
-    voice->feedback = (((out64 * (int64_t)eg_value) >> FP_SHIFT) *
-                       (int64_t)voice->feedback_multiplier) >> FP_SHIFT;
-
-    /* return the product of amplitude and oscillator output */
-    return (int32_t)(((int64_t)amp * out64) >> FP_SHIFT);
-}
-
-static inline int32_t
-dx7_op_calculate_modulator(int32_t eg_value, uint32_t phase)
-{
-    int32_t index, mod_index, out;
+    int32_t index;
+    dx7_sample_t mod_index, out;
+#ifdef HEXTER_USE_FLOATING_POINT
+    float frac;
+#endif /* HEXTER_USE_FLOATING_POINT */
 
     /* use eg_value to look up the modulation index, with interpolation */
+#ifndef HEXTER_USE_FLOATING_POINT
     index = FP_TO_INT(eg_value);
     mod_index = dx7_voice_eg_ol_to_mod_index[index];
-    mod_index += fp_multiply(dx7_voice_eg_ol_to_mod_index[index + 1] - mod_index,
+    mod_index += FP_MULTIPLY(dx7_voice_eg_ol_to_mod_index[index + 1] - mod_index,
                              eg_value & FP_MASK);
+#else /* HEXTER_USE_FLOATING_POINT */
+    index = lrintf(eg_value - 0.5f);
+    frac = eg_value - (float)index;
+    mod_index = dx7_voice_eg_ol_to_mod_index[index];
+    mod_index += (dx7_voice_eg_ol_to_mod_index[index + 1] - mod_index) * frac;
+#endif /* HEXTER_USE_FLOATING_POINT */
 
     /* use phase to look up the oscillator output, with interpolation */
-    index = (phase >> FP_TO_SINE_SHIFT) & SINE_MASK;
+#ifndef HEXTER_USE_FLOATING_POINT
+    index = ((uint32_t)phase >> FP_TO_SINE_SHIFT) & SINE_MASK;
     out = dx7_voice_sin_table[index];
     out += (((int64_t)(dx7_voice_sin_table[index + 1] - out) *
              (int64_t)(phase & FP_TO_SINE_MASK)) >>
             (FP_SHIFT + FP_TO_SINE_SHIFT));
+#else /* HEXTER_USE_FLOATING_POINT */
+    phase *= (float)SINE_SIZE;
+    index = lrintf(phase - 0.5f);
+    frac = phase - (float)index;
+    index &= SINE_MASK;
+    out = dx7_voice_sin_table[index];
+    out += (dx7_voice_sin_table[index + 1] - out) * frac;
+#endif /* HEXTER_USE_FLOATING_POINT */
 
     /* return the product of modulation index and oscillator output */
-    return fp_multiply(mod_index, out);
+    return FP_MULTIPLY(mod_index, out);
 }
 
-static inline int32_t
-dx7_op_calculate_modulator_saving_feedback(dx7_voice_t *voice, int32_t eg_value,
-                                           uint32_t phase)
+static inline dx7_sample_t
+dx7_op_calculate_operator_saving_feedback(dx7_voice_t *voice, dx7_sample_t eg_value,
+                                          dx7_sample_t phase)
 {
-    int32_t index, mod_index, out;
+    int32_t index;
+    dx7_sample_t mod_index, out;
+#ifndef HEXTER_USE_FLOATING_POINT
     int64_t out64;
+#else /* HEXTER_USE_FLOATING_POINT */
+    float frac;
+#endif /* HEXTER_USE_FLOATING_POINT */
 
     /* use eg_value to look up the modulation index, with interpolation */
+#ifndef HEXTER_USE_FLOATING_POINT
     index = FP_TO_INT(eg_value);
     mod_index = dx7_voice_eg_ol_to_mod_index[index];
-    mod_index += fp_multiply(dx7_voice_eg_ol_to_mod_index[index + 1] - mod_index,
+    mod_index += FP_MULTIPLY(dx7_voice_eg_ol_to_mod_index[index + 1] - mod_index,
                              eg_value & FP_MASK);
+#else /* HEXTER_USE_FLOATING_POINT */
+    index = lrintf(eg_value - 0.5f);
+    frac = eg_value - (float)index;
+    mod_index = dx7_voice_eg_ol_to_mod_index[index];
+    mod_index += (dx7_voice_eg_ol_to_mod_index[index + 1] - mod_index) * frac;
+#endif /* HEXTER_USE_FLOATING_POINT */
 
     /* use phase to look up the oscillator output, with interpolation */
-    index = (phase >> FP_TO_SINE_SHIFT) & SINE_MASK;
+#ifndef HEXTER_USE_FLOATING_POINT
+    index = ((uint32_t)phase >> FP_TO_SINE_SHIFT) & SINE_MASK;
     out = dx7_voice_sin_table[index];
     out64 = out +
             (((int64_t)(dx7_voice_sin_table[index + 1] - out) *
               (int64_t)(phase & FP_TO_SINE_MASK)) >>
              (FP_SHIFT + FP_TO_SINE_SHIFT));
+#else /* HEXTER_USE_FLOATING_POINT */
+    phase *= (float)SINE_SIZE;
+    index = lrintf(phase - 0.5f);
+    frac = phase - (float)index;
+    index &= SINE_MASK;
+    out = dx7_voice_sin_table[index];
+    out += (dx7_voice_sin_table[index + 1] - out) * frac;
+#endif /* HEXTER_USE_FLOATING_POINT */
 
     /* save that output, scaled by our eg level, feedback amount, and a
      * constant, as our feedback modulation index */
+#ifndef HEXTER_USE_FLOATING_POINT
     voice->feedback = (((out64 * (int64_t)eg_value) >> FP_SHIFT) *
                        (int64_t)voice->feedback_multiplier) >> FP_SHIFT;
+#else /* HEXTER_USE_FLOATING_POINT */
+    voice->feedback = out * eg_value * voice->feedback_multiplier;
+#endif /* HEXTER_USE_FLOATING_POINT */
 
-    /* return the product of amplitude and oscillator output */
+    /* return the product of modulation index and oscillator output */
+#ifndef HEXTER_USE_FLOATING_POINT
     return (int32_t)(((int64_t)mod_index * out64) >> FP_SHIFT);
+#else /* HEXTER_USE_FLOATING_POINT */
+    return mod_index * out;
+#endif /* HEXTER_USE_FLOATING_POINT */
 }
 
 static inline void
@@ -274,10 +275,10 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
                  LADSPA_Data *out, unsigned long sample_count,
                  int do_control_update)
 {
-    unsigned long  sample;
-    static int32_t ampmod[4] = { 0 };
-    int32_t        i;
-    int32_t        output;
+    unsigned long       sample;
+    static dx7_sample_t ampmod[4] = { 0 };
+    dx7_sample_t        i;
+    dx7_sample_t        output;
 
     if (!float_equality(voice->last_port_volume, *instance->volume) ||
         voice->last_cc_volume != instance->cc_volume)
@@ -292,28 +293,36 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
         for (sample = 0; sample < sample_count; sample++) {
 
             /* calculate amplitude modulation amounts */
-            i = fp_multiply(voice->amp_mod_lfo_amd_value, voice->lfo_delay_value);
+            i = FP_MULTIPLY(voice->amp_mod_lfo_amd_value, voice->lfo_delay_value);
             i = voice->amp_mod_env_value +
-                    fp_multiply(i + voice->amp_mod_lfo_mods_value, instance->lfo_buffer[sample]);
+                    FP_MULTIPLY(i + voice->amp_mod_lfo_mods_value, instance->lfo_buffer[sample]);
+
+#ifndef HEXTER_USE_FLOATING_POINT
+#define AMPMOD2_CONSTANT  (7726076 >> (24 - FP_SHIFT))  /* 0.460510 */
+#define AMPMOD1_CONSTANT  (3993950 >> (24 - FP_SHIFT))  /* 0.238058 */
+#else /* HEXTER_USE_FLOATING_POINT */
+#define AMPMOD2_CONSTANT  (0.460510f)
+#define AMPMOD1_CONSTANT  (0.238058f)
+#endif /* HEXTER_USE_FLOATING_POINT */
             ampmod[3] = i;
-            ampmod[2] = fp_multiply(i, FLOAT_TO_FP(0.460510));
-            ampmod[1] = fp_multiply(i, FLOAT_TO_FP(0.238058));
+            ampmod[2] = FP_MULTIPLY(i, AMPMOD2_CONSTANT);
+            ampmod[1] = FP_MULTIPLY(i, AMPMOD1_CONSTANT);
 
             output = (
-                      dx7_op_calculate_carrier(voice->op[OP_3].eg.value - ampmod[voice->op[OP_3].amp_mod_sens],
-                                               voice->op[OP_3].phase +
-                                               dx7_op_calculate_modulator(voice->op[OP_4].eg.value - ampmod[voice->op[OP_4].amp_mod_sens],
+                      dx7_op_calculate_operator(voice->op[OP_3].eg.value - ampmod[voice->op[OP_3].amp_mod_sens],
+                                                voice->op[OP_3].phase +
+                                                dx7_op_calculate_operator(voice->op[OP_4].eg.value - ampmod[voice->op[OP_4].amp_mod_sens],
                                                                           voice->op[OP_4].phase +
-                                                                          dx7_op_calculate_modulator(voice->op[OP_5].eg.value - ampmod[voice->op[OP_5].amp_mod_sens],
-                                                                                                     voice->op[OP_5].phase +
-                                                                                                     /* -FIX- need to determine if amp mod is included in feedback, or after */
-                                                                                                     dx7_op_calculate_modulator_saving_feedback(voice,
-                                                                                                                                                voice->op[OP_6].eg.value - ampmod[voice->op[OP_6].amp_mod_sens],
-                                                                                                                                                voice->op[OP_6].phase +
-                                                                                                                                                voice->feedback)))) +
-                      dx7_op_calculate_carrier(voice->op[OP_1].eg.value - ampmod[voice->op[OP_1].amp_mod_sens],
-                                               voice->op[OP_1].phase +
-                                               dx7_op_calculate_modulator(voice->op[OP_2].eg.value - ampmod[voice->op[OP_2].amp_mod_sens],
+                                                                          dx7_op_calculate_operator(voice->op[OP_5].eg.value - ampmod[voice->op[OP_5].amp_mod_sens],
+                                                                                                    voice->op[OP_5].phase +
+                                                                                                    /* -FIX- need to determine if amp mod is included in feedback, or after */
+                                                                                                    dx7_op_calculate_operator_saving_feedback(voice,
+                                                                                                                                              voice->op[OP_6].eg.value - ampmod[voice->op[OP_6].amp_mod_sens],
+                                                                                                                                              voice->op[OP_6].phase +
+                                                                                                                                              voice->feedback)))) +
+                      dx7_op_calculate_operator(voice->op[OP_1].eg.value - ampmod[voice->op[OP_1].amp_mod_sens],
+                                                voice->op[OP_1].phase +
+                                                dx7_op_calculate_operator(voice->op[OP_2].eg.value - ampmod[voice->op[OP_2].amp_mod_sens],
                                                                           voice->op[OP_2].phase))
                      );
             /* voice->volume_value contains a scaling factor for the number of carriers */
@@ -351,10 +360,10 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
             if (voice->lfo_delay_duration) {
                 voice->lfo_delay_value += voice->lfo_delay_increment;
                 if (--voice->lfo_delay_duration == 0) {
-                    i = ++voice->lfo_delay_segment;
-                    voice->lfo_delay_duration  = instance->lfo_delay_duration[i];
-                    voice->lfo_delay_value     = instance->lfo_delay_value[i];
-                    voice->lfo_delay_increment = instance->lfo_delay_increment[i];
+                    int seg = ++voice->lfo_delay_segment;
+                    voice->lfo_delay_duration  = instance->lfo_delay_duration[seg];
+                    voice->lfo_delay_value     = instance->lfo_delay_value[seg];
+                    voice->lfo_delay_increment = instance->lfo_delay_increment[seg];
                 }
             }
             if (voice->volume_duration) {
@@ -365,20 +374,18 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
         break;
 
       /* Now we'll use some macros to make it easier to read */
-#define car(_i, _p)     dx7_op_calculate_carrier(voice->op[_i].eg.value - ampmod[voice->op[_i].amp_mod_sens], voice->op[_i].phase + _p)
-#define mod(_i, _p)     dx7_op_calculate_modulator(voice->op[_i].eg.value - ampmod[voice->op[_i].amp_mod_sens], voice->op[_i].phase + _p)
-#define car_sfb(_i, _p) dx7_op_calculate_carrier_saving_feedback(voice, voice->op[_i].eg.value - ampmod[voice->op[_i].amp_mod_sens], voice->op[_i].phase + _p)
-#define mod_sfb(_i, _p) dx7_op_calculate_modulator_saving_feedback(voice, voice->op[_i].eg.value - ampmod[voice->op[_i].amp_mod_sens], voice->op[_i].phase + _p)
+#define op(_i, _p)     dx7_op_calculate_operator(voice->op[_i].eg.value - ampmod[voice->op[_i].amp_mod_sens], voice->op[_i].phase + _p)
+#define op_sfb(_i, _p) dx7_op_calculate_operator_saving_feedback(voice, voice->op[_i].eg.value - ampmod[voice->op[_i].amp_mod_sens], voice->op[_i].phase + _p)
 
 #define RENDER \
         for (sample = 0; sample < sample_count; sample++) { \
             /* calculate amplitude modulation amounts */ \
-            i = fp_multiply(voice->amp_mod_lfo_amd_value, voice->lfo_delay_value); \
+            i = FP_MULTIPLY(voice->amp_mod_lfo_amd_value, voice->lfo_delay_value); \
             i = voice->amp_mod_env_value + \
-                    fp_multiply(i + voice->amp_mod_lfo_mods_value, instance->lfo_buffer[sample]); \
+                    FP_MULTIPLY(i + voice->amp_mod_lfo_mods_value, instance->lfo_buffer[sample]); \
             ampmod[3] = i; \
-            ampmod[2] = fp_multiply(i, FLOAT_TO_FP(0.460510)); \
-            ampmod[1] = fp_multiply(i, FLOAT_TO_FP(0.238058)); \
+            ampmod[2] = FP_MULTIPLY(i, AMPMOD2_CONSTANT); \
+            ampmod[1] = FP_MULTIPLY(i, AMPMOD1_CONSTANT); \
             ALGORITHM; \
             /* voice->volume_value contains a scaling factor for the number of carriers */ \
             /* mix voice output into output buffer */ \
@@ -411,10 +418,10 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
             if (voice->lfo_delay_duration) { \
                 voice->lfo_delay_value += voice->lfo_delay_increment; \
                 if (--voice->lfo_delay_duration == 0) { \
-                    i = ++voice->lfo_delay_segment; \
-                    voice->lfo_delay_duration  = instance->lfo_delay_duration[i]; \
-                    voice->lfo_delay_value     = instance->lfo_delay_value[i]; \
-                    voice->lfo_delay_increment = instance->lfo_delay_increment[i]; \
+                    int seg = ++voice->lfo_delay_segment; \
+                    voice->lfo_delay_duration  = instance->lfo_delay_duration[seg]; \
+                    voice->lfo_delay_value     = instance->lfo_delay_value[seg]; \
+                    voice->lfo_delay_increment = instance->lfo_delay_increment[seg]; \
                 } \
             } \
             if (voice->volume_duration) { \
@@ -426,10 +433,10 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 1: /* algorithm 2 */
 
 #define ALGORITHM { \
-            output = (                                                 \
-                      car(OP_3, mod(OP_4, mod(OP_5, mod(OP_6, 0)))) +  \
-                      car(OP_1, mod_sfb(OP_2, voice->feedback))        \
-                     );                                                \
+            output = (                                             \
+                      op(OP_3, op(OP_4, op(OP_5, op(OP_6, 0)))) +  \
+                      op(OP_1, op_sfb(OP_2, voice->feedback))      \
+                     );                                            \
         }
 
         RENDER;
@@ -439,10 +446,10 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 2: /* algorithm 3 */
 
 #define ALGORITHM { \
-            output = (                                                        \
-                      car(OP_4, mod(OP_5, mod_sfb(OP_6, voice->feedback))) +  \
-                      car(OP_1, mod(OP_2, mod(OP_3, 0)))                      \
-                     );                                                       \
+            output = (                                                     \
+                      op(OP_4, op(OP_5, op_sfb(OP_6, voice->feedback))) +  \
+                      op(OP_1, op(OP_2, op(OP_3, 0)))                      \
+                     );                                                    \
         }
 
         RENDER;
@@ -452,10 +459,10 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 3: /* algorithm 4 */
 
 #define ALGORITHM { \
-            output = (                                                        \
-                      car_sfb(OP_4, mod(OP_5, mod(OP_6, voice->feedback))) +  \
-                      car(OP_1, mod(OP_2, mod(OP_3, 0)))                      \
-                     );                                                       \
+            output = (                                                     \
+                      op_sfb(OP_4, op(OP_5, op(OP_6, voice->feedback))) +  \
+                      op(OP_1, op(OP_2, op(OP_3, 0)))                      \
+                     );                                                    \
         }
 
         RENDER;
@@ -465,11 +472,11 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 4: /* algorithm 5 */
 
 #define ALGORITHM { \
-            output = (                                             \
-                      car(OP_5, mod_sfb(OP_6, voice->feedback)) +  \
-                      car(OP_3, mod(OP_4, 0)) +                    \
-                      car(OP_1, mod(OP_2, 0))                      \
-                     );                                            \
+            output = (                                           \
+                      op(OP_5, op_sfb(OP_6, voice->feedback)) +  \
+                      op(OP_3, op(OP_4, 0)) +                    \
+                      op(OP_1, op(OP_2, 0))                      \
+                     );                                          \
         }
 
         RENDER;
@@ -479,11 +486,11 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 5: /* algorithm 6 */
 
 #define ALGORITHM { \
-            output = (                                             \
-                      car_sfb(OP_5, mod(OP_6, voice->feedback)) +  \
-                      car(OP_3, mod(OP_4, 0)) +                    \
-                      car(OP_1, mod(OP_2, 0))                      \
-                     );                                            \
+            output = (                                           \
+                      op_sfb(OP_5, op(OP_6, voice->feedback)) +  \
+                      op(OP_3, op(OP_4, 0)) +                    \
+                      op(OP_1, op(OP_2, 0))                      \
+                     );                                          \
         }
 
         RENDER;
@@ -493,11 +500,11 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 6: /* algorithm 7 */
 
 #define ALGORITHM { \
-            output = (                                                       \
-                      car(OP_3, mod(OP_5, mod_sfb(OP_6, voice->feedback)) +  \
-                                mod(OP_4, 0)) +                              \
-                      car(OP_1, mod(OP_2, 0))                                \
-                     );                                                      \
+            output = (                                                    \
+                      op(OP_3, op(OP_5, op_sfb(OP_6, voice->feedback)) +  \
+                               op(OP_4, 0)) +                             \
+                      op(OP_1, op(OP_2, 0))                               \
+                     );                                                   \
         }
 
         RENDER;
@@ -507,11 +514,11 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 7: /* algorithm 8 */
 
 #define ALGORITHM { \
-            output = (                                             \
-                      car(OP_3, mod(OP_5, mod(OP_6, 0)) +          \
-                                mod_sfb(OP_4, voice->feedback)) +  \
-                      car(OP_1, mod(OP_2, 0))                      \
-                     );                                            \
+            output = (                                           \
+                      op(OP_3, op(OP_5, op(OP_6, 0)) +           \
+                               op_sfb(OP_4, voice->feedback)) +  \
+                      op(OP_1, op(OP_2, 0))                      \
+                     );                                          \
         }
 
         RENDER;
@@ -521,11 +528,11 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 8: /* algorithm 9 */
 
 #define ALGORITHM { \
-            output = (                                           \
-                      car(OP_3, mod(OP_5, mod(OP_6, 0)) +        \
-                                mod(OP_4, 0)) +                  \
-                      car(OP_1, mod_sfb(OP_2, voice->feedback))  \
-                     );                                          \
+            output = (                                         \
+                      op(OP_3, op(OP_5, op(OP_6, 0)) +         \
+                               op(OP_4, 0)) +                  \
+                      op(OP_1, op_sfb(OP_2, voice->feedback))  \
+                     );                                        \
         }
 
         RENDER;
@@ -535,11 +542,11 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 9: /* algorithm 10 */
 
 #define ALGORITHM { \
-            output = (                                                      \
-                      car(OP_4, mod(OP_6, 0) +                              \
-                                mod(OP_5, 0)) +                             \
-                      car(OP_1, mod(OP_2, mod_sfb(OP_3, voice->feedback)))  \
-                     );                                                     \
+            output = (                                                   \
+                      op(OP_4, op(OP_6, 0) +                             \
+                               op(OP_5, 0)) +                            \
+                      op(OP_1, op(OP_2, op_sfb(OP_3, voice->feedback)))  \
+                     );                                                  \
         }
 
         RENDER;
@@ -549,11 +556,11 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 10: /* algorithm 11 */
 
 #define ALGORITHM { \
-            output = (                                            \
-                      car(OP_4, mod_sfb(OP_6, voice->feedback) +  \
-                                mod(OP_5, 0)) +                   \
-                      car(OP_1, mod(OP_2, mod(OP_3, 0)))          \
-                     );                                           \
+            output = (                                          \
+                      op(OP_4, op_sfb(OP_6, voice->feedback) +  \
+                               op(OP_5, 0)) +                   \
+                      op(OP_1, op(OP_2, op(OP_3, 0)))           \
+                     );                                         \
         }
 
         RENDER;
@@ -563,12 +570,12 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 11: /* algorithm 12 */
 
 #define ALGORITHM { \
-            output = (                                           \
-                      car(OP_3, mod(OP_6, 0) +                   \
-                                mod(OP_5, 0) +                   \
-                                mod(OP_4, 0)) +                  \
-                      car(OP_1, mod_sfb(OP_2, voice->feedback))  \
-                     );                                          \
+            output = (                                         \
+                      op(OP_3, op(OP_6, 0) +                   \
+                               op(OP_5, 0) +                   \
+                               op(OP_4, 0)) +                  \
+                      op(OP_1, op_sfb(OP_2, voice->feedback))  \
+                     );                                        \
         }
 
         RENDER;
@@ -578,12 +585,12 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 12: /* algorithm 13 */
 
 #define ALGORITHM { \
-            output = (                                            \
-                      car(OP_3, mod_sfb(OP_6, voice->feedback) +  \
-                                mod(OP_5, 0) +                    \
-                                mod(OP_4, 0)) +                   \
-                      car(OP_1, mod(OP_2, 0))                     \
-                     );                                           \
+            output = (                                          \
+                      op(OP_3, op_sfb(OP_6, voice->feedback) +  \
+                               op(OP_5, 0) +                    \
+                               op(OP_4, 0)) +                   \
+                      op(OP_1, op(OP_2, 0))                     \
+                     );                                         \
         }
 
         RENDER;
@@ -593,11 +600,11 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 13: /* algorithm 14 */
 
 #define ALGORITHM { \
-            output = (                                                      \
-                      car(OP_3, mod(OP_4, mod_sfb(OP_6, voice->feedback) +  \
-                                          mod(OP_5, 0))) +                  \
-                      car(OP_1, mod(OP_2, 0))                               \
-                     );                                                     \
+            output = (                                                   \
+                      op(OP_3, op(OP_4, op_sfb(OP_6, voice->feedback) +  \
+                                        op(OP_5, 0))) +                  \
+                      op(OP_1, op(OP_2, 0))                              \
+                     );                                                  \
         }
 
         RENDER;
@@ -607,11 +614,11 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 14: /* algorithm 15 */
 
 #define ALGORITHM { \
-            output = (                                           \
-                      car(OP_3, mod(OP_4, mod(OP_6, 0) +         \
-                                          mod(OP_5, 0))) +       \
-                      car(OP_1, mod_sfb(OP_2, voice->feedback))  \
-                     );                                          \
+            output = (                                         \
+                      op(OP_3, op(OP_4, op(OP_6, 0) +          \
+                                        op(OP_5, 0))) +        \
+                      op(OP_1, op_sfb(OP_2, voice->feedback))  \
+                     );                                        \
         }
 
         RENDER;
@@ -621,9 +628,9 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 15: /* algorithm 16 */
 
 #define ALGORITHM { \
-            output = car(OP_1, mod(OP_5, mod_sfb(OP_6, voice->feedback)) +  \
-                               mod(OP_3, mod(OP_4, 0)) +                    \
-                               mod(OP_2, 0));                               \
+            output = op(OP_1, op(OP_5, op_sfb(OP_6, voice->feedback)) +  \
+                              op(OP_3, op(OP_4, 0)) +                    \
+                              op(OP_2, 0));                              \
         }
 
         RENDER;
@@ -633,9 +640,9 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 16: /* algorithm 17 */
 
 #define ALGORITHM { \
-            output = car(OP_1, mod(OP_5, mod(OP_6, 0)) +         \
-                               mod(OP_3, mod(OP_4, 0)) +         \
-                               mod_sfb(OP_2, voice->feedback));  \
+            output = op(OP_1, op(OP_5, op(OP_6, 0)) +          \
+                              op(OP_3, op(OP_4, 0)) +          \
+                              op_sfb(OP_2, voice->feedback));  \
         }
 
         RENDER;
@@ -645,9 +652,9 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 17: /* algorithm 18 */
 
 #define ALGORITHM { \
-            output = car(OP_1, mod(OP_4, mod(OP_5, mod(OP_6, 0))) +  \
-                               mod_sfb(OP_3, voice->feedback) +      \
-                               mod(OP_2, 0));                        \
+            output = op(OP_1, op(OP_4, op(OP_5, op(OP_6, 0))) +  \
+                              op_sfb(OP_3, voice->feedback) +    \
+                              op(OP_2, 0));                      \
         }
 
         RENDER;
@@ -657,12 +664,12 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 18: /* algorithm 19 */
 
 #define ALGORITHM { \
-            i = mod_sfb(OP_6, voice->feedback);           \
-            output = (                                    \
-                      car(OP_5, i) +                      \
-                      car(OP_4, i) +                      \
-                      car(OP_1, mod(OP_2, mod(OP_3, 0)))  \
-                     );                                   \
+            i = op_sfb(OP_6, voice->feedback);         \
+            output = (                                 \
+                      op(OP_5, i) +                    \
+                      op(OP_4, i) +                    \
+                      op(OP_1, op(OP_2, op(OP_3, 0)))  \
+                     );                                \
         }
 
         RENDER;
@@ -672,13 +679,13 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 19: /* algorithm 20 */
 
 #define ALGORITHM { \
-            i = mod_sfb(OP_3, voice->feedback);  \
-            output = (                           \
-                      car(OP_4, mod(OP_6, 0) +   \
-                                mod(OP_5, 0)) +  \
-                      car(OP_2, i) +             \
-                      car(OP_1, i)               \
-                     );                          \
+            i = op_sfb(OP_3, voice->feedback);  \
+            output = (                          \
+                      op(OP_4, op(OP_6, 0) +    \
+                               op(OP_5, 0)) +   \
+                      op(OP_2, i) +             \
+                      op(OP_1, i)               \
+                     );                         \
         }
 
         RENDER;
@@ -688,12 +695,12 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 20: /* algorithm 21 */
 
 #define ALGORITHM { \
-            i = mod(OP_6, 0);                    \
-            output = car(OP_5, i) +              \
-                     car(OP_4, i);               \
-            i = mod_sfb(OP_3, voice->feedback);  \
-            output += car(OP_2, i) +             \
-                      car(OP_1, i);              \
+            i = op(OP_6, 0);                    \
+            output = op(OP_5, i) +              \
+                     op(OP_4, i);               \
+            i = op_sfb(OP_3, voice->feedback);  \
+            output += op(OP_2, i) +             \
+                      op(OP_1, i);              \
         }
 
         RENDER;
@@ -703,13 +710,13 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 21: /* algorithm 22 */
 
 #define ALGORITHM { \
-            i = mod_sfb(OP_6, voice->feedback);  \
-            output = (                           \
-                      car(OP_5, i) +             \
-                      car(OP_4, i) +             \
-                      car(OP_3, i) +             \
-                      car(OP_1, mod(OP_2, 0))    \
-                     );                          \
+            i = op_sfb(OP_6, voice->feedback);  \
+            output = (                          \
+                      op(OP_5, i) +             \
+                      op(OP_4, i) +             \
+                      op(OP_3, i) +             \
+                      op(OP_1, op(OP_2, 0))     \
+                     );                         \
         }
 
         RENDER;
@@ -719,13 +726,13 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 22: /* algorithm 23 */
 
 #define ALGORITHM { \
-            i = mod_sfb(OP_6, voice->feedback);  \
-            output = (                           \
-                      car(OP_5, i) +             \
-                      car(OP_4, i) +             \
-                      car(OP_2, mod(OP_3, 0)) +  \
-                      car(OP_1, 0)               \
-                     );                          \
+            i = op_sfb(OP_6, voice->feedback);  \
+            output = (                          \
+                      op(OP_5, i) +             \
+                      op(OP_4, i) +             \
+                      op(OP_2, op(OP_3, 0)) +   \
+                      op(OP_1, 0)               \
+                     );                         \
         }
 
         RENDER;
@@ -735,14 +742,14 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 23: /* algorithm 24 */
 
 #define ALGORITHM { \
-            i = mod_sfb(OP_6, voice->feedback);  \
-            output = (                           \
-                      car(OP_5, i) +             \
-                      car(OP_4, i) +             \
-                      car(OP_3, i) +             \
-                      car(OP_2, 0) +             \
-                      car(OP_1, 0)               \
-                     );                          \
+            i = op_sfb(OP_6, voice->feedback);  \
+            output = (                          \
+                      op(OP_5, i) +             \
+                      op(OP_4, i) +             \
+                      op(OP_3, i) +             \
+                      op(OP_2, 0) +             \
+                      op(OP_1, 0)               \
+                     );                         \
         }
 
         RENDER;
@@ -752,14 +759,14 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 24: /* algorithm 25 */
 
 #define ALGORITHM { \
-            i = mod_sfb(OP_6, voice->feedback);  \
-            output = (                           \
-                      car(OP_5, i) +             \
-                      car(OP_4, i) +             \
-                      car(OP_3, 0) +             \
-                      car(OP_2, 0) +             \
-                      car(OP_1, 0)               \
-                     );                          \
+            i = op_sfb(OP_6, voice->feedback);  \
+            output = (                          \
+                      op(OP_5, i) +             \
+                      op(OP_4, i) +             \
+                      op(OP_3, 0) +             \
+                      op(OP_2, 0) +             \
+                      op(OP_1, 0)               \
+                     );                         \
         }
 
         RENDER;
@@ -769,12 +776,12 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 25: /* algorithm 26 */
 
 #define ALGORITHM { \
-            output = (                                            \
-                      car(OP_4, mod_sfb(OP_6, voice->feedback) +  \
-                                mod(OP_5, 0)) +                   \
-                      car(OP_2, mod(OP_3, 0)) +                   \
-                      car(OP_1, 0)                                \
-                     );                                           \
+            output = (                                          \
+                      op(OP_4, op_sfb(OP_6, voice->feedback) +  \
+                               op(OP_5, 0)) +                   \
+                      op(OP_2, op(OP_3, 0)) +                   \
+                      op(OP_1, 0)                               \
+                     );                                         \
         }
 
         RENDER;
@@ -784,12 +791,12 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 26: /* algorithm 27 */
 
 #define ALGORITHM { \
-            output = (                                             \
-                      car(OP_4, mod(OP_6, 0) +                     \
-                                mod(OP_5, 0)) +                    \
-                      car(OP_2, mod_sfb(OP_3, voice->feedback)) +  \
-                      car(OP_1, 0)                                 \
-                     );                                            \
+            output = (                                           \
+                      op(OP_4, op(OP_6, 0) +                     \
+                               op(OP_5, 0)) +                    \
+                      op(OP_2, op_sfb(OP_3, voice->feedback)) +  \
+                      op(OP_1, 0)                                \
+                     );                                          \
         }
 
         RENDER;
@@ -799,11 +806,11 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 27: /* algorithm 28 */
 
 #define ALGORITHM { \
-            output = (                                                        \
-                      car(OP_6, 0) +                                          \
-                      car(OP_3, mod(OP_4, mod_sfb(OP_5, voice->feedback))) +  \
-                      car(OP_1, mod(OP_2, 0))                                 \
-                     );                                                       \
+            output = (                                                     \
+                      op(OP_6, 0) +                                        \
+                      op(OP_3, op(OP_4, op_sfb(OP_5, voice->feedback))) +  \
+                      op(OP_1, op(OP_2, 0))                                \
+                     );                                                    \
         }
 
         RENDER;
@@ -813,12 +820,12 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 28: /* algorithm 29 */
 
 #define ALGORITHM { \
-            output = (                                             \
-                      car(OP_5, mod_sfb(OP_6, voice->feedback)) +  \
-                      car(OP_3, mod(OP_4, 0)) +                    \
-                      car(OP_2, 0) +                               \
-                      car(OP_1, 0)                                 \
-                     );                                            \
+            output = (                                           \
+                      op(OP_5, op_sfb(OP_6, voice->feedback)) +  \
+                      op(OP_3, op(OP_4, 0)) +                    \
+                      op(OP_2, 0) +                              \
+                      op(OP_1, 0)                                \
+                     );                                          \
         }
 
         RENDER;
@@ -828,12 +835,12 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 29: /* algorithm 30 */
 
 #define ALGORITHM { \
-            output = (                                                        \
-                      car(OP_6, 0) +                                          \
-                      car(OP_3, mod(OP_4, mod_sfb(OP_5, voice->feedback))) +  \
-                      car(OP_2, 0) +                                          \
-                      car(OP_1, 0)                                            \
-                     );                                                       \
+            output = (                                                     \
+                      op(OP_6, 0) +                                        \
+                      op(OP_3, op(OP_4, op_sfb(OP_5, voice->feedback))) +  \
+                      op(OP_2, 0) +                                        \
+                      op(OP_1, 0)                                          \
+                     );                                                    \
         }
 
         RENDER;
@@ -843,13 +850,13 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       case 30: /* algorithm 31 */
 
 #define ALGORITHM { \
-            output = (                                             \
-                      car(OP_5, mod_sfb(OP_6, voice->feedback)) +  \
-                      car(OP_4, 0) +                               \
-                      car(OP_3, 0) +                               \
-                      car(OP_2, 0) +                               \
-                      car(OP_1, 0)                                 \
-                     );                                            \
+            output = (                                           \
+                      op(OP_5, op_sfb(OP_6, voice->feedback)) +  \
+                      op(OP_4, 0) +                              \
+                      op(OP_3, 0) +                              \
+                      op(OP_2, 0) +                              \
+                      op(OP_1, 0)                                \
+                     );                                          \
         }
 
         RENDER;
@@ -860,24 +867,22 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
       default: /* just in case */
 
 #define ALGORITHM { \
-            output = (                                  \
-                      car_sfb(OP_6, voice->feedback) +  \
-                      car(OP_5, 0) +                    \
-                      car(OP_4, 0) +                    \
-                      car(OP_3, 0) +                    \
-                      car(OP_2, 0) +                    \
-                      car(OP_1, 0)                      \
-                     );                                 \
+            output = (                                 \
+                      op_sfb(OP_6, voice->feedback) +  \
+                      op(OP_5, 0) +                    \
+                      op(OP_4, 0) +                    \
+                      op(OP_3, 0) +                    \
+                      op(OP_2, 0) +                    \
+                      op(OP_1, 0)                      \
+                     );                                \
         }
 
         RENDER;
         break;
 #undef ALGORITHM
 
-#undef car
-#undef mod
-#undef car_sfb
-#undef mod_sfb
+#undef op
+#undef op_sfb
     }
 
     if (do_control_update) {
@@ -890,6 +895,16 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
         /* check if we've decayed to nothing, turn off voice if so */
         if (dx7_voice_check_for_dead(voice))
             return; /* we're dead now, so return */
+
+#ifdef HEXTER_USE_FLOATING_POINT
+        /* wrap oscillator phases */
+        voice->op[OP_6].phase -= floorf(voice->op[OP_6].phase);
+        voice->op[OP_5].phase -= floorf(voice->op[OP_5].phase);
+        voice->op[OP_4].phase -= floorf(voice->op[OP_4].phase);
+        voice->op[OP_3].phase -= floorf(voice->op[OP_3].phase);
+        voice->op[OP_2].phase -= floorf(voice->op[OP_2].phase);
+        voice->op[OP_1].phase -= floorf(voice->op[OP_1].phase);
+#endif /* HEXTER_USE_FLOATING_POINT */
 
         /* update pitch envelope and portamento */
         dx7_pitch_eg_process(instance, &voice->pitch_eg);

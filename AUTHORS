@@ -4,7 +4,7 @@
                    for the DSSI Soft Synth Interface
 
 hexter is written and maintained by Sean Bolton.  It is copyright
-(c) 2009 under the GNU General Public License, version 2 or later.
+(c) 2011 under the GNU General Public License, version 2 or later.
 Bug reports, kudos, and job offers (seriously!) should go directly
 to Sean at the email address:
 
@@ -29,7 +29,8 @@ hexter includes code taken from the following sources:
 The following people have assisted in hexter's development:
 
     Jamie Bullock's enthusiasm and help with reverse engineering
-    made the LFO and modulation code happen.
+    made the LFO and modulation code happen. Jamie also contributed
+    the NRPN support.
 
     Martin Tarenskeen contributed improvements to hexter's DX7 patch
     loading code.

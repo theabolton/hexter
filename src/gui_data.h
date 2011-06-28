@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004, 2009 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2011 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -23,6 +23,9 @@
 
 #include "hexter_types.h"
 
+int   dx7_bulk_dump_checksum(uint8_t *data, int length);
+int   dx7_patchbank_load(const char *filename, dx7_patch_t *firstpatch,
+                         int maxpatches, char **errmsg);
 char *encode_7in6(uint8_t *data, int length);
 void  gui_data_patches_init(void);
 void  gui_data_patches_free(void);

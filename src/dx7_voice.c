@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004, 2009 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2011 Sean Bolton and others.
  *
  * Portions of this file may have come from Juan Linietsky's
  * rx-saturno, copyright (C) 2002 by Juan Linietsky.
@@ -23,6 +23,10 @@
  * Boston, MA 02110-1301 USA.
  */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #define _BSD_SOURCE    1
 #define _SVID_SOURCE   1
 #define _ISOC99_SOURCE 1
@@ -35,6 +39,7 @@
 #include "hexter_types.h"
 #include "hexter_synth.h"
 #include "dx7_voice.h"
+#include "dx7_voice_data.h"
 
 /*
  * dx7_voice_new
@@ -298,27 +303,24 @@ dx7_op_eg_set_increment(hexter_instance_t *instance, dx7_op_eg_t *eg,
 
     if (need_compensation) {
 
-        int32_t precomp_duration = (INT_TO_FP(31) - eg->value + instance->dx7_eg_max_slew - 1) /
-                                   instance->dx7_eg_max_slew;
+        int32_t precomp_duration = FP_DIVIDE_CEIL(INT_TO_FP(31) - eg->value, instance->dx7_eg_max_slew);
 
         if (precomp_duration >= eg->duration) {
 
             eg->duration = precomp_duration;
-            eg->increment = (eg->target - eg->value) / eg->duration;
+            eg->increment = (eg->target - eg->value) / (dx7_sample_t)eg->duration;
             if (eg->increment > instance->dx7_eg_max_slew) {
-                eg->duration = (eg->target - eg->value + instance->dx7_eg_max_slew - 1) /
-                               instance->dx7_eg_max_slew;
-                eg->increment = (eg->target - eg->value) / eg->duration;
+                eg->duration = FP_DIVIDE_CEIL(eg->target - eg->value, instance->dx7_eg_max_slew);
+                eg->increment = (eg->target - eg->value) / (dx7_sample_t)eg->duration;
             }
             eg->in_precomp = 0;
 
         } else if (precomp_duration < 1) {
 
-            eg->increment = (eg->target - eg->value) / eg->duration;
+            eg->increment = (eg->target - eg->value) / (dx7_sample_t)eg->duration;
             if (eg->increment > instance->dx7_eg_max_slew) {
-                eg->duration = (eg->target - eg->value + instance->dx7_eg_max_slew - 1) /
-                               instance->dx7_eg_max_slew;
-                eg->increment = (eg->target - eg->value) / eg->duration;
+                eg->duration = FP_DIVIDE_CEIL(eg->target - eg->value, instance->dx7_eg_max_slew);
+                eg->increment = (eg->target - eg->value) / (dx7_sample_t)eg->duration;
             }
             eg->in_precomp = 0;
 
@@ -326,14 +328,13 @@ dx7_op_eg_set_increment(hexter_instance_t *instance, dx7_op_eg_t *eg,
 
             eg->postcomp_duration = eg->duration - precomp_duration;
             eg->duration = precomp_duration;
-            eg->increment = (INT_TO_FP(31) - eg->value) / precomp_duration;
+            eg->increment = (INT_TO_FP(31) - eg->value) / (dx7_sample_t)precomp_duration;
             eg->postcomp_increment = (eg->target - INT_TO_FP(31)) /
-                                     eg->postcomp_duration;
+                                         (dx7_sample_t)eg->postcomp_duration;
             if (eg->postcomp_increment > instance->dx7_eg_max_slew) {
-                eg->postcomp_duration = (eg->target - INT_TO_FP(31) + instance->dx7_eg_max_slew - 1) /
-                                        instance->dx7_eg_max_slew;
+                eg->postcomp_duration = FP_DIVIDE_CEIL(eg->target - INT_TO_FP(31), instance->dx7_eg_max_slew);
                 eg->postcomp_increment = (eg->target - INT_TO_FP(31)) /
-                                         eg->postcomp_duration;
+                                             (dx7_sample_t)eg->postcomp_duration;
             }
             eg->in_precomp = 1;
 
@@ -341,11 +342,10 @@ dx7_op_eg_set_increment(hexter_instance_t *instance, dx7_op_eg_t *eg,
 
     } else {
 
-        eg->increment = (eg->target - eg->value) / eg->duration;
-        if (abs(eg->increment) > instance->dx7_eg_max_slew) {
-            eg->duration = (abs(eg->target - eg->value) + instance->dx7_eg_max_slew - 1) /
-                           instance->dx7_eg_max_slew;
-            eg->increment = (eg->target - eg->value) / eg->duration;
+        eg->increment = (eg->target - eg->value) / (dx7_sample_t)eg->duration;
+        if (FP_ABS(eg->increment) > instance->dx7_eg_max_slew) {
+            eg->duration = FP_DIVIDE_CEIL(FP_ABS(eg->target - eg->value), instance->dx7_eg_max_slew);
+            eg->increment = (eg->target - eg->value) / (dx7_sample_t)eg->duration;
         }
         eg->in_precomp = 0;
 
@@ -366,20 +366,24 @@ dx7_op_eg_set_next_phase(hexter_instance_t *instance, dx7_op_eg_t *eg)
       case 1:
         eg->phase++;
 	dx7_op_eg_set_increment(instance, eg, eg->rate[eg->phase], eg->level[eg->phase]);
+#ifndef HEXTER_USE_FLOATING_POINT
         if (eg->duration == 1 && eg->increment == 0)
+#else /* HEXTER_USE_FLOATING_POINT */
+        if (eg->duration == 1 && fabsf(eg->increment) < 1e-10f)
+#endif /* HEXTER_USE_FLOATING_POINT */
             dx7_op_eg_set_next_phase(instance, eg);
         break;
 
       case 2:
         eg->mode = DX7_EG_SUSTAINING;
-        eg->increment = 0;
+        eg->increment = INT_TO_FP(0);
         eg->duration = -1;
         break;
 
       case 3:
       default: /* shouldn't be anything but 0 to 3 */
         eg->mode = DX7_EG_FINISHED;
-        eg->increment = 0;
+        eg->increment = INT_TO_FP(0);
         eg->duration = -1;
         break;
 
@@ -399,14 +403,18 @@ dx7_op_eg_set_phase(hexter_instance_t *instance, dx7_op_eg_t *eg, int phase)
 
             eg->mode = DX7_EG_CONSTANT;
             eg->value = INT_TO_FP(eg->level[3]);
-            eg->increment = 0;
+            eg->increment = INT_TO_FP(0);
             eg->duration = -1;
 
         } else {
 
             eg->mode = DX7_EG_RUNNING;
             dx7_op_eg_set_increment(instance, eg, eg->rate[phase], eg->level[phase]);
+#ifndef HEXTER_USE_FLOATING_POINT
             if (eg->duration == 1 && eg->increment == 0)
+#else /* HEXTER_USE_FLOATING_POINT */
+            if (eg->duration == 1 && fabsf(eg->increment) < 1e-10f)
+#endif /* HEXTER_USE_FLOATING_POINT */
                 dx7_op_eg_set_next_phase(instance, eg);
 
         }
@@ -416,7 +424,11 @@ dx7_op_eg_set_phase(hexter_instance_t *instance, dx7_op_eg_t *eg, int phase)
 
             eg->mode = DX7_EG_RUNNING;
             dx7_op_eg_set_increment(instance, eg, eg->rate[phase], eg->level[phase]);
+#ifndef HEXTER_USE_FLOATING_POINT
             if (eg->duration == 1 && eg->increment == 0)
+#else /* HEXTER_USE_FLOATING_POINT */
+            if (eg->duration == 1 && fabsf(eg->increment) < 1e-10f)
+#endif /* HEXTER_USE_FLOATING_POINT */
                 dx7_op_eg_set_next_phase(instance, eg);
 
         }
@@ -536,8 +548,7 @@ dx7_eg_init_constants(hexter_instance_t *instance)
                      (dx7_voice_eg_rate_rise_percent[99] -
                       dx7_voice_eg_rate_rise_percent[0]);
 
-    instance->dx7_eg_max_slew = lrintf((float)INT_TO_FP(99) /
-                                       (duration * instance->sample_rate));
+    instance->dx7_eg_max_slew = FLOAT_TO_FP(99.0f / (duration * instance->sample_rate));
 
     instance->nugget_rate = instance->sample_rate / (float)HEXTER_NUGGET_SIZE;
 
@@ -570,7 +581,7 @@ dx7_pitch_eg_set_increment(hexter_instance_t *instance, dx7_pitch_eg_t *eg,
 
     if (eg->duration > 1) {
 
-        eg->increment = (eg->target - eg->value) / eg->duration;
+        eg->increment = (eg->target - eg->value) / (dx7_sample_t)eg->duration;
 
     } else {
 
@@ -714,7 +725,7 @@ dx7_op_recalculate_increment(hexter_instance_t *instance, dx7_op_t *op)
         freq *= (1.0 + ((double)op->fine / 100.0));
 
     }
-    op->phase_increment = lrint(freq * (double)FP_SIZE / (double)instance->sample_rate);
+    op->phase_increment = DOUBLE_TO_FP(freq / (double)instance->sample_rate);
 }
 
 double
@@ -775,10 +786,15 @@ dx7_voice_recalculate_volume(hexter_instance_t *instance, dx7_voice_t *voice)
     f += (float)instance->cc_volume * 41.0f / 16256.0f;
     i = lrintf(f - 0.5f);
     f -= (float)i;
-    voice->volume_target = (FP_TO_FLOAT(dx7_voice_eg_ol_to_amp[i]) +
-                            f * FP_TO_FLOAT(dx7_voice_eg_ol_to_amp[i + 1] -
-                                            dx7_voice_eg_ol_to_amp[i])) *
-                           0.110384f / dx7_voice_carrier_count[voice->algorithm];
+    voice->volume_target = (FP_TO_FLOAT(dx7_voice_eg_ol_to_mod_index[i]) +
+                            f * FP_TO_FLOAT(dx7_voice_eg_ol_to_mod_index[i + 1] -
+                                            dx7_voice_eg_ol_to_mod_index[i]))
+                           / 2.08855f  /* scale modulation index to output amplitude */
+                           / dx7_voice_carrier_count[voice->algorithm]  /* scale for number of carriers */
+                           * 0.110384f;  /* Where did this value come from? It approximates the
+                                          * -18.1dBFS nominal per-voice output level hexter should
+                                          * have, but then why didn't I just use 0.125f like in
+                                          * hexter 0.5.7? */
 
     if (voice->volume_value < 0.0f) { /* initial setup */
         voice->volume_value = voice->volume_target;
@@ -799,24 +815,24 @@ dx7_voice_recalculate_volume(hexter_instance_t *instance, dx7_voice_t *voice)
 static inline void
 dx7_lfo_set_speed(hexter_instance_t *instance)
 {
-    uint32_t period = lrintf(instance->sample_rate /
-                             dx7_voice_lfo_frequency[instance->lfo_speed]);
+    int32_t period = lrintf(instance->sample_rate /
+                            dx7_voice_lfo_frequency[instance->lfo_speed]);
 
     switch (instance->lfo_wave) {
       default:
       case 0:  /* triangle */
         instance->lfo_phase = 0;
-        instance->lfo_value = 0;
+        instance->lfo_value = INT_TO_FP(0);
         instance->lfo_duration0 = period / 2;
         instance->lfo_duration1 = period - instance->lfo_duration0;
-        instance->lfo_increment0 = FP_SIZE / (int32_t)instance->lfo_duration0;
+        instance->lfo_increment0 = INT_TO_FP(1) / (dx7_sample_t)instance->lfo_duration0;
         instance->lfo_increment1 = -instance->lfo_increment0;
         instance->lfo_duration = instance->lfo_duration0;
         instance->lfo_increment = instance->lfo_increment0;
         break;
       case 1:  /* saw down */
         instance->lfo_phase = 0;
-        instance->lfo_value = 0;
+        instance->lfo_value = INT_TO_FP(0);
         if (period >= (instance->ramp_duration * 4)) {
             instance->lfo_duration0 = period - instance->ramp_duration;
             instance->lfo_duration1 = instance->ramp_duration;
@@ -824,14 +840,14 @@ dx7_lfo_set_speed(hexter_instance_t *instance)
             instance->lfo_duration0 = period * 3 / 4;
             instance->lfo_duration1 = period - instance->lfo_duration0;
         }
-        instance->lfo_increment0 = FP_SIZE / (int32_t)instance->lfo_duration0;
-        instance->lfo_increment1 = -FP_SIZE / (int32_t)instance->lfo_duration1;
+        instance->lfo_increment0 = INT_TO_FP(1)  / (dx7_sample_t)instance->lfo_duration0;
+        instance->lfo_increment1 = INT_TO_FP(-1) / (dx7_sample_t)instance->lfo_duration1;
         instance->lfo_duration = instance->lfo_duration0;
         instance->lfo_increment = instance->lfo_increment0;
         break;
       case 2:  /* saw up */
         instance->lfo_phase = 1;
-        instance->lfo_value = FP_SIZE;
+        instance->lfo_value = INT_TO_FP(1);
         if (period >= (instance->ramp_duration * 4)) {
             instance->lfo_duration0 = instance->ramp_duration;
             instance->lfo_duration1 = period - instance->ramp_duration;
@@ -839,14 +855,14 @@ dx7_lfo_set_speed(hexter_instance_t *instance)
             instance->lfo_duration1 = period * 3 / 4;
             instance->lfo_duration0 = period - instance->lfo_duration1;
         }
-        instance->lfo_increment0 = FP_SIZE / (int32_t)instance->lfo_duration0;
-        instance->lfo_increment1 = -FP_SIZE / (int32_t)instance->lfo_duration1;
+        instance->lfo_increment0 = INT_TO_FP(1)  / (dx7_sample_t)instance->lfo_duration0;
+        instance->lfo_increment1 = INT_TO_FP(-1) / (dx7_sample_t)instance->lfo_duration1;
         instance->lfo_duration = instance->lfo_duration1;
         instance->lfo_increment = instance->lfo_increment1;
         break;
       case 3:  /* square */
         instance->lfo_phase = 0;
-        instance->lfo_value = FP_SIZE;
+        instance->lfo_value = INT_TO_FP(1);
         if (period >= (instance->ramp_duration * 6)) {
             instance->lfo_duration0 = (period / 2) - instance->ramp_duration;
             instance->lfo_duration1 = instance->ramp_duration;
@@ -854,18 +870,22 @@ dx7_lfo_set_speed(hexter_instance_t *instance)
             instance->lfo_duration0 = period / 3;
             instance->lfo_duration1 = (period / 2) - instance->lfo_duration0;
         }
-        instance->lfo_increment1 = FP_SIZE / (int32_t)instance->lfo_duration1;
+        instance->lfo_increment1 = INT_TO_FP(1) / (dx7_sample_t)instance->lfo_duration1;
         instance->lfo_increment0 = -instance->lfo_increment1;
         instance->lfo_duration = instance->lfo_duration0;
-        instance->lfo_increment = 0;
+        instance->lfo_increment = INT_TO_FP(0);
         break;
       case 4:  /* sine */
+#ifndef HEXTER_USE_FLOATING_POINT
         instance->lfo_value = FP_SIZE / 4; /* phase of pi/2 in cosine table */
-        instance->lfo_increment = FP_SIZE / period;
+#else /* HEXTER_USE_FLOATING_POINT */
+        instance->lfo_value = 0.25f;       /* phase of pi/2 in cosine table */
+#endif /* HEXTER_USE_FLOATING_POINT */
+        instance->lfo_increment = INT_TO_FP(1) / (dx7_sample_t)period;
         break;
       case 5:  /* sample/hold */
         instance->lfo_phase = 0;
-        instance->lfo_value = rand() & FP_MASK;
+        instance->lfo_value = FP_RAND();
         if (period >= (instance->ramp_duration * 4)) {
             instance->lfo_duration0 = period - instance->ramp_duration;
             instance->lfo_duration1 = instance->ramp_duration;
@@ -874,7 +894,7 @@ dx7_lfo_set_speed(hexter_instance_t *instance)
             instance->lfo_duration1 = period - instance->lfo_duration0;
         }
         instance->lfo_duration = instance->lfo_duration0;
-        instance->lfo_increment = 0;
+        instance->lfo_increment = INT_TO_FP(0);
         break;
     }
 }
@@ -913,28 +933,28 @@ dx7_lfo_set(hexter_instance_t *instance, dx7_voice_t *voice)
     if (instance->lfo_delay != voice->lfo_delay) {
         instance->lfo_delay = voice->lfo_delay;
         if (voice->lfo_delay > 0) {
-            instance->lfo_delay_value[0] = 0;
+            instance->lfo_delay_value[0] = INT_TO_FP(0);
             /* -FIX- Jamie's early approximation, replace when he has more data */
             instance->lfo_delay_duration[0] =
                 lrintf(instance->sample_rate *
                        (0.00175338f * pow((float)voice->lfo_delay, 3.10454f) + 169.344f - 168.0f) /
                        1000.0f);
-            instance->lfo_delay_increment[0] = 0;
-            instance->lfo_delay_value[1] = 0;
+            instance->lfo_delay_increment[0] = INT_TO_FP(0);
+            instance->lfo_delay_value[1] = INT_TO_FP(0);
             /* -FIX- Jamie's early approximation, replace when he has more data */
             instance->lfo_delay_duration[1] =
                 lrintf(instance->sample_rate *
                        (0.321877f * pow((float)voice->lfo_delay, 2.01163) + 494.201f - 168.0f) /
                        1000.0f);                                                 /* time from note-on until full on */
             instance->lfo_delay_duration[1] -= instance->lfo_delay_duration[0];  /* now time from end-of-delay until full */
-            instance->lfo_delay_increment[1] = FP_SIZE / (int32_t)instance->lfo_delay_duration[1];
-            instance->lfo_delay_value[2] = FP_SIZE;
+            instance->lfo_delay_increment[1] = INT_TO_FP(1) / (dx7_sample_t)instance->lfo_delay_duration[1];
+            instance->lfo_delay_value[2] = INT_TO_FP(1);
             instance->lfo_delay_duration[2] = 0;
-            instance->lfo_delay_increment[2] = 0;
+            instance->lfo_delay_increment[2] = INT_TO_FP(0);
         } else {
-            instance->lfo_delay_value[0] = FP_SIZE;
+            instance->lfo_delay_value[0] = INT_TO_FP(1);
             instance->lfo_delay_duration[0] = 0;
-            instance->lfo_delay_increment[0] = 0;
+            instance->lfo_delay_increment[0] = INT_TO_FP(0);
         }
         /* -FIX- The TX7 resets the lfo delay for all playing notes at each
          * new note on. We're not doing that yet, and I don't really wanna,
@@ -958,12 +978,12 @@ dx7_lfo_update(hexter_instance_t *instance, unsigned long sample_count)
             if (!(--instance->lfo_duration)) {
                 if (instance->lfo_phase) {
                     instance->lfo_phase = 0;
-                    instance->lfo_value = 0;
+                    instance->lfo_value = INT_TO_FP(0);
                     instance->lfo_duration = instance->lfo_duration0;
                     instance->lfo_increment = instance->lfo_increment0;
                 } else {
                     instance->lfo_phase = 1;
-                    instance->lfo_value = FP_SIZE;
+                    instance->lfo_value = INT_TO_FP(1);
                     instance->lfo_duration = instance->lfo_duration1;
                     instance->lfo_increment = instance->lfo_increment1;
                 }
@@ -985,9 +1005,9 @@ dx7_lfo_update(hexter_instance_t *instance, unsigned long sample_count)
                     break;
                   case 1:
                     instance->lfo_phase = 2;
-                    instance->lfo_value = 0;
+                    instance->lfo_value = INT_TO_FP(0);
                     instance->lfo_duration = instance->lfo_duration0;
-                    instance->lfo_increment = 0;
+                    instance->lfo_increment = INT_TO_FP(0);
                     break;
                   case 2:
                     instance->lfo_phase = 3;
@@ -996,9 +1016,9 @@ dx7_lfo_update(hexter_instance_t *instance, unsigned long sample_count)
                     break;
                   case 3:
                     instance->lfo_phase = 0;
-                    instance->lfo_value = FP_SIZE;
+                    instance->lfo_value = INT_TO_FP(1);
                     instance->lfo_duration = instance->lfo_duration0;
-                    instance->lfo_increment = 0;
+                    instance->lfo_increment = INT_TO_FP(0);
                     break;
                 }
             }
@@ -1010,8 +1030,14 @@ dx7_lfo_update(hexter_instance_t *instance, unsigned long sample_count)
         break;
       case 4:  /* sine */
         for (sample = 0; sample < sample_count; sample++) {
+#ifndef HEXTER_USE_FLOATING_POINT
             int32_t phase, index, out;
+#else /* HEXTER_USE_FLOATING_POINT */
+            int32_t index;
+            float phase, frac, out;
+#endif /* HEXTER_USE_FLOATING_POINT */
 
+#ifndef HEXTER_USE_FLOATING_POINT
             phase = instance->lfo_value;
             index = (phase >> FP_TO_SINE_SHIFT) & SINE_MASK;
             out = dx7_voice_sin_table[index];
@@ -1019,8 +1045,19 @@ dx7_lfo_update(hexter_instance_t *instance, unsigned long sample_count)
                      (int64_t)(phase & FP_TO_SINE_MASK)) >>
                     (FP_SHIFT + FP_TO_SINE_SHIFT));
             out = (out + FP_SIZE) >> 1;  /* shift to unipolar */
+#else /* HEXTER_USE_FLOATING_POINT */
+            phase = instance->lfo_value * (float)SINE_SIZE;
+            index = lrintf(phase - 0.5f);
+            frac = phase - (float)index;
+            out = dx7_voice_sin_table[index];
+            out += (dx7_voice_sin_table[index + 1] - out) * frac;
+            out = (out + 1.0f) / 2.0f;  /* shift to unipolar */
+#endif /* HEXTER_USE_FLOATING_POINT */
             instance->lfo_buffer[sample] = out;
             instance->lfo_value += instance->lfo_increment;
+#ifdef HEXTER_USE_FLOATING_POINT
+            if (instance->lfo_value > 1.0f) instance->lfo_value -= 1.0f;
+#endif /* HEXTER_USE_FLOATING_POINT */
         }
         instance->lfo_value_for_pitch = FP_TO_DOUBLE(instance->lfo_buffer[sample - 1]) * 2.0 - 1.0;
         break;
@@ -1033,13 +1070,13 @@ dx7_lfo_update(hexter_instance_t *instance, unsigned long sample_count)
                     instance->lfo_phase = 0;
                     instance->lfo_value = instance->lfo_target;
                     instance->lfo_duration = instance->lfo_duration0;
-                    instance->lfo_increment = 0;
+                    instance->lfo_increment = INT_TO_FP(0);
                 } else {
                     instance->lfo_phase = 1;
                     instance->lfo_duration = instance->lfo_duration1;
-                    instance->lfo_target = rand() & FP_MASK;
+                    instance->lfo_target = FP_RAND();
                     instance->lfo_increment = (instance->lfo_target - instance->lfo_value) /
-                                                  (int32_t)instance->lfo_duration;
+                                                  (dx7_sample_t)instance->lfo_duration;
                 }
             }
         }
@@ -1141,32 +1178,32 @@ dx7_voice_update_mod_depths(hexter_instance_t *instance, dx7_voice_t* voice)
     voice->amp_mod_lfo_amd_target = FLOAT_TO_FP(adepth);
     if (voice->amp_mod_lfo_amd_value <= INT_TO_FP(-64)) {
         voice->amp_mod_lfo_amd_value = voice->amp_mod_lfo_amd_target;
-        voice->amp_mod_lfo_amd_increment = 0;
+        voice->amp_mod_lfo_amd_increment = INT_TO_FP(0);
         voice->amp_mod_lfo_amd_duration = 0;
     } else {
         voice->amp_mod_lfo_amd_duration = instance->ramp_duration;
         voice->amp_mod_lfo_amd_increment = (voice->amp_mod_lfo_amd_target - voice->amp_mod_lfo_amd_value) /
-                                           (int32_t)voice->amp_mod_lfo_amd_duration;
+                                               (dx7_sample_t)voice->amp_mod_lfo_amd_duration;
     }
     voice->amp_mod_lfo_mods_target = FLOAT_TO_FP(mdepth);
     if (voice->amp_mod_lfo_mods_value <= INT_TO_FP(-64)) {
         voice->amp_mod_lfo_mods_value = voice->amp_mod_lfo_mods_target;
-        voice->amp_mod_lfo_mods_increment = 0;
+        voice->amp_mod_lfo_mods_increment = INT_TO_FP(0);
         voice->amp_mod_lfo_mods_duration = 0;
     } else {
         voice->amp_mod_lfo_mods_duration = instance->ramp_duration;
         voice->amp_mod_lfo_mods_increment = (voice->amp_mod_lfo_mods_target - voice->amp_mod_lfo_mods_value) /
-                                           (int32_t)voice->amp_mod_lfo_mods_duration;
+                                                (dx7_sample_t)voice->amp_mod_lfo_mods_duration;
     }
     voice->amp_mod_env_target = FLOAT_TO_FP(edepth);
     if (voice->amp_mod_env_value <= INT_TO_FP(-64)) {
         voice->amp_mod_env_value = voice->amp_mod_env_target;
-        voice->amp_mod_env_increment = 0;
+        voice->amp_mod_env_increment = INT_TO_FP(0);
         voice->amp_mod_env_duration = 0;
     } else {
         voice->amp_mod_env_duration = instance->ramp_duration;
         voice->amp_mod_env_increment = (voice->amp_mod_env_target - voice->amp_mod_env_value) /
-                                           (int32_t)voice->amp_mod_env_duration;
+                                           (dx7_sample_t)voice->amp_mod_env_duration;
     }
 }
 
@@ -1179,9 +1216,9 @@ dx7_voice_calculate_runtime_parameters(hexter_instance_t *instance, dx7_voice_t*
     double freq;
 
     dx7_pitch_envelope_prepare(instance, voice);
-    voice->amp_mod_lfo_amd_value = INT_TO_FP(-64);   /* force initial setup */
-    voice->amp_mod_lfo_mods_value = INT_TO_FP(-64);
-    voice->amp_mod_env_value = INT_TO_FP(-64);
+    voice->amp_mod_lfo_amd_value = INT_TO_FP(-65);   /* force initial setup */
+    voice->amp_mod_lfo_mods_value = INT_TO_FP(-65);
+    voice->amp_mod_env_value = INT_TO_FP(-65);
     voice->lfo_delay_segment = 0;
     voice->lfo_delay_value     = instance->lfo_delay_value[0];
     voice->lfo_delay_duration  = instance->lfo_delay_duration[0];
@@ -1196,7 +1233,7 @@ dx7_voice_calculate_runtime_parameters(hexter_instance_t *instance, dx7_voice_t*
     for (i = 0; i < MAX_DX7_OPERATORS; i++) {
         voice->op[i].frequency = freq;
         if (voice->osc_key_sync) {
-            voice->op[i].phase = 0;
+            voice->op[i].phase = INT_TO_FP(0);
         }
         dx7_op_recalculate_increment(instance, &voice->op[i]);
         dx7_op_envelope_prepare(instance, &voice->op[i],
@@ -1272,7 +1309,7 @@ dx7_voice_set_data(hexter_instance_t *instance, dx7_voice_t *voice)
 
     /* the "99.0" here is because we're also using this multiplier to scale the
      * eg level from 0-99 to 0-1 */
-    voice->feedback_multiplier = lrintf(aux_feedbk / 99.0 * FP_SIZE);
+    voice->feedback_multiplier = DOUBLE_TO_FP(aux_feedbk / 99.0);
 
     voice->osc_key_sync = edit_buffer[136] & 0x01;
 

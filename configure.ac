@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(hexter, 0.6.2, musound-at-jps-dot-net)
+AC_INIT(hexter, 0.6.9.0, musound-at-jps-dot-net)
 
 AC_CONFIG_SRCDIR(src/hexter.c)
 AM_INIT_AUTOMAKE
@@ -14,24 +14,25 @@ AC_PROG_LIBTOOL
 
 AC_C_BIGENDIAN
 
-AC_ARG_WITH(textui, AC_HELP_STRING([--with-textui], [build text-only user interface (disables GTK+ GUI)]),
+AC_ARG_WITH(textui, AC_HELP_STRING([--with-textui],
+                                        [build text-only user interface]),
             [ if test $withval = "yes"; then with_textui=yes ;
               else with_textui=no ; fi ], with_textui=no)
-AC_ARG_WITH(gtk2, AC_HELP_STRING([--with-gtk2], [use GTK+ 2.0 default=yes]),
+AC_ARG_WITH(gtk2, AC_HELP_STRING([--with-gtk2],
+                                        [build GTK+ 2.0 user interface]),
             [ if test $withval = "yes"; then try_gtk2=yes ;
               else try_gtk2=no ; fi ], try_gtk2=yes)
-with_gtk=no
-if test "x${with_textui}" = 'xno'; then
-  dnl Check for GTK+
-  dnl First look for GTK+ 2.x, unless '--without-gtk2' was specified.
-  if test "x${try_gtk2}" = 'xyes'; then
-      AM_PATH_GTK_2_0(2.0.0, with_gtk='yes (version 2.0)', with_gtk=no)
-  fi
-  dnl  No GTK+ 2.x found, look for GTK+ 1.2 instead
-  if test "x${with_gtk}" = 'xno'; then
-      AM_PATH_GTK(1.2.0, with_gtk='yes (version 1.2)', AC_MSG_ERROR([error: no version of GTK+ found (maybe you want '--with-textui'?)]))
-  fi
-else
+
+dnl Check for GTK
+if test "x${try_gtk2}" = 'xyes'; then
+  AM_PATH_GTK_2_0(2.4.0, with_gtk2=yes, with_gtk2=no)
+fi
+if test "x${with_gtk2}" = 'xyes'; then
+  AC_DEFINE(BUILD_GTKUI, 1, Define to 1 if building the GTK user interface)
+fi
+
+dnl Text UI
+if test "x${with_textui}" = 'xyes'; then
   dnl Check for readline and (n)curses/termcap
   AC_CHECK_HEADER([readline/readline.h], , AC_MSG_ERROR([error: no readline.h found]))
   AC_CHECK_HEADER([readline/history.h], , AC_MSG_ERROR([error: no history.h found]))
@@ -47,10 +48,18 @@ else
   fi
   AC_SUBST(READLINE_LIBS)
   AC_DEFINE(BUILD_TEXTUI, 1, Define to 1 if building the text-only user interface)
-  with_gtk='no (building text-only user interface)'
 fi
 AM_CONDITIONAL(BUILD_TEXTUI, test "x${with_textui}" = 'xyes')
-echo "GTK support: $with_gtk"
+AM_CONDITIONAL(BUILD_GTKUI, test "x${with_gtk2}" = 'xyes')
+
+dnl floating point
+AC_ARG_ENABLE(floating-point,
+              AC_HELP_STRING([--enable-floating-point],
+                             [enable floating point rendering, instead of fixed point, default=no]),
+              [ if test $enableval = "yes"; then
+                  AC_DEFINE(HEXTER_USE_FLOATING_POINT, 1, [Define to 1 to enable floating-point rendering.])
+                fi ],
+              enable_floating_point=no)
 
 dnl Check for LADSPA
 AC_CHECK_HEADERS(ladspa.h)
@@ -74,21 +83,6 @@ darwin*)
 esac
 AM_CONDITIONAL(DARWIN, test x$darwin = xyes)
 
-dnl dnl Set PACKAGE_DATA_DIR in config.h.
-dnl if test "x${datadir}" = 'x${prefix}/share'; then
-dnl   if test "x${prefix}" = "xNONE"; then
-dnl     AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${ac_default_prefix}/share/${PACKAGE}")
-dnl   else
-dnl     AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${prefix}/share/${PACKAGE}")
-dnl   fi
-dnl else
-dnl   AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${datadir}/${PACKAGE}")
-dnl fi
-
-dnl dnl Set PACKAGE_SOURCE_DIR in config.h.
-dnl packagesrcdir=`cd $srcdir && pwd`
-dnl AC_DEFINE_UNQUOTED(PACKAGE_SOURCE_DIR, "${packagesrcdir}")
-
 dnl Use lotsa flags if we have gcc.
 CFLAGS="$CFLAGS $ALSA_CFLAGS $MODULE_CFLAGS"
 LDFLAGS="$LDFLAGS $MODULE_LIBS"
@@ -104,11 +98,13 @@ if test "x$GCC" = "xyes"; then
   esac
   case " $CFLAGS " in
   *[\ \	]-ffast-math[\ \	]*) ;;
-  *) CFLAGS="$CFLAGS -fomit-frame-pointer -funroll-loops -finline-functions -ffast-math -Winline" ;;
-  esac
-  # add '-finline-limit=...' only for GCC 3.x:
-  case `$CC -dumpversion 2>/dev/null` in
-  3.*) CFLAGS="$CFLAGS -finline-limit=5000" ;;
+  *)  CFLAGS="$CFLAGS -fomit-frame-pointer -funroll-loops -finline-functions -ffast-math -Winline"
+      # add '-finline-limit=...' only for GCC 3.x and 4.x:
+      case `$CC -dumpversion 2>/dev/null` in
+      # these --params are also in 3.4.6, but not in 3.3.6
+      4.*) CFLAGS="$CFLAGS -finline-limit=5000 --param large-function-growth=4900 --param inline-unit-growth=900" ;;
+      3.*) CFLAGS="$CFLAGS -finline-limit=5000" ;;
+      esac ;;
   esac
 fi
 changequote([,])dnl
@@ -117,4 +113,9 @@ AC_OUTPUT([
 Makefile
 src/Makefile
 ])
+
+echo "====== hexter ${PACKAGE_VERSION} configured ======"
+echo "Floating point render enabled:      $enable_floating_point"
+echo "Building GTK 2.0 user interface:    $with_gtk2"
+echo "Building text-only user interface:  $with_textui"
 

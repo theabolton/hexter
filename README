@@ -19,7 +19,7 @@ applications.  More information on DSSI can be found at:
 
   http://dssi.sourceforge.net/
 
-hexter is written by Sean Bolton, and copyright (c) 2009 under the
+hexter is written by Sean Bolton, and copyright (c) 2011 under the
 GNU General Public License, version 2 or later.  See the enclosed
 file COPYING for details.  While this software is 'free' within the
 requirements of this license, I (Sean) would appreciate any or all
@@ -42,15 +42,15 @@ hexter requires the following:
         dssi.sourceforge.net address above.
 
     - liblo version 0.12 or greater (0.23 or greater recommended), a
-        library implementing the Open Sound Control protocol,
+        library implementing the Open Sound Control (OSC) protocol,
         available at:
 
-        http://plugin.org.uk/liblo/
+        http://liblo.sourceforge.net/
 
     - pkgconfig with PKG_CONFIG_PATH set appropriately to pick up
         DSSI and liblo.
 
-    - GTK+ version 1.2 or 2.x.
+    - GTK+ version 2.4 or later.
 
     - the LADSPA v1.x SDK.
 
@@ -90,6 +90,11 @@ aren't particularly helpful, so try this instead:
     If you're using gcc and wish to provide your own optimization
     flags, you MUST at least use '-finline' and a non-zero '-O' flag
     to get decent results.
+
+    Depending on your hardware, you may wish to add the
+    '--enable-floating-point' option to the configure cammand line.
+    See the 'Fixed Point vs. Floating Point Rendering' section
+    below. (If you're not sure, it is safest to leave it off.)
 
 4. Enable debugging information if you desire: edit the file
     src/hexter.h, and define DSSP_DEBUG as explained in the
@@ -287,16 +292,181 @@ In addition to the performance parameter MIDI messages mentioned
 above, hexter responds to MIDI volume (MIDI control change 39),
 sustain pedal (MIDI CC 64), and all-sounds-off, all-notes-off, and
 reset-controllers control messages (CCs 120, 123, and 121,
-respectively).  The 'coarse frequency' parameter for each operator
-can also be controlled in real time via the following MIDI control
-change mappings:
+respectively).
 
-Control change 16 (General Purpose #1 MSB) to operator 1 FC.
-Control change 17 (General Purpose #2 MSB) to operator 2 FC.
-Control change 18 (General Purpose #3 MSB) to operator 3 FC.
-Control change 19 (General Purpose #4 MSB) to operator 4 FC.
-Control change 80 (General Purpose #5)     to operator 5 FC.
-Control change 81 (General Purpose #6)     to operator 6 FC.
+The operator parameters of the current patch can also be changed via
+the following MIDI control change (CC) and non-registered parameter
+(NRPN) messages. Messages marked with '*' in the 'Operator' column
+will cause an immediate effect on playing notes, while the others
+will only affect subsequently-played notes.
+
+CC or NRPN                     | Operator | Parameter
+-------------------------------+----------+------------------------
+CC 16 (General Purpose #1 MSB) |   * 1    | Frequency Coarse
+CC 17 (General Purpose #2 MSB) |   * 2    | Frequency Coarse
+CC 18 (General Purpose #3 MSB) |   * 3    | Frequency Coarse
+CC 19 (General Purpose #4 MSB) |   * 4    | Frequency Coarse
+CC 80 (General Purpose #5)     |   * 5    | Frequency Coarse
+CC 81 (General Purpose #6)     |   * 6    | Frequency Coarse
+NRPN   0                       |     6    | Envelope Generator Rate 1
+NRPN   1                       |     6    | Envelope Generator Rate 2
+NRPN   2                       |     6    | Envelope Generator Rate 3
+NRPN   3                       |     6    | Envelope Generator Rate 4
+NRPN   4                       |     6    | Envelope Generator Level 1
+NRPN   5                       |     6    | Envelope Generator Level 2
+NRPN   6                       |     6    | Envelope Generator Level 3
+NRPN   7                       |     6    | Envelope Generator Level 4
+NRPN   8                       |     6    | Keyboard Level Scaling Break Point
+NRPN   9                       |     6    | Keyboard Level Scaling Left Depth
+NRPN  10                       |     6    | Keyboard Level Scaling Right Depth
+NRPN  11                       |     6    | Keyboard Level Scaling Left Curve
+NRPN  12                       |     6    | Keyboard Level Scaling Right Curve
+NRPN  13                       |     6    | Keyboard Rate Scaling
+NRPN  14                       |     6    | Amp Mod Sensitivity   
+NRPN  15                       |     6    | Keyboard Velocity Sensitivity
+NRPN  16                       |     6    | Operator Output Level  
+NRPN  17                       |   * 6    | Oscillator Mode
+NRPN  18                       |   * 6    | Oscillator Frequency Coarse
+NRPN  19                       |   * 6    | Oscillator Frequency Fine
+NRPN  20                       |   * 6    | Oscillator Detune
+NRPN  21                       |     5    | Envelope Generator Rate 1
+NRPN  22                       |     5    | Envelope Generator Rate 2
+NRPN  23                       |     5    | Envelope Generator Rate 3
+NRPN  24                       |     5    | Envelope Generator Rate 4
+NRPN  25                       |     5    | Envelope Generator Level 1
+NRPN  26                       |     5    | Envelope Generator Level 2
+NRPN  27                       |     5    | Envelope Generator Level 3
+NRPN  28                       |     5    | Envelope Generator Level 4
+NRPN  29                       |     5    | Keyboard Level Scaling Break Point
+NRPN  30                       |     5    | Keyboard Level Scaling Left Depth
+NRPN  31                       |     5    | Keyboard Level Scaling Right Depth
+NRPN  32                       |     5    | Keyboard Level Scaling Left Curve
+NRPN  33                       |     5    | Keyboard Level Scaling Right Curve
+NRPN  34                       |     5    | Keyboard Rate Scaling
+NRPN  35                       |     5    | Amp Mod Sensitivity   
+NRPN  36                       |     5    | Keyboard Velocity Sensitivity
+NRPN  37                       |     5    | Operator Output Level  
+NRPN  38                       |   * 5    | Oscillator Mode
+NRPN  39                       |   * 5    | Oscillator Frequency Coarse
+NRPN  40                       |   * 5    | Oscillator Frequency Fine
+NRPN  41                       |   * 5    | Oscillator Detune
+NRPN  42                       |     4    | Envelope Generator Rate 1
+NRPN  43                       |     4    | Envelope Generator Rate 2
+NRPN  44                       |     4    | Envelope Generator Rate 3
+NRPN  45                       |     4    | Envelope Generator Rate 4
+NRPN  46                       |     4    | Envelope Generator Level 1
+NRPN  47                       |     4    | Envelope Generator Level 2
+NRPN  48                       |     4    | Envelope Generator Level 3
+NRPN  49                       |     4    | Envelope Generator Level 4
+NRPN  50                       |     4    | Keyboard Level Scaling Break Point
+NRPN  51                       |     4    | Keyboard Level Scaling Left Depth
+NRPN  52                       |     4    | Keyboard Level Scaling Right Depth
+NRPN  53                       |     4    | Keyboard Level Scaling Left Curve
+NRPN  54                       |     4    | Keyboard Level Scaling Right Curve
+NRPN  55                       |     4    | Keyboard Rate Scaling
+NRPN  56                       |     4    | Amp Mod Sensitivity   
+NRPN  57                       |     4    | Keyboard Velocity Sensitivity
+NRPN  58                       |     4    | Operator Output Level  
+NRPN  59                       |   * 4    | Oscillator Mode
+NRPN  60                       |   * 4    | Oscillator Frequency Coarse
+NRPN  61                       |   * 4    | Oscillator Frequency Fine
+NRPN  62                       |   * 4    | Oscillator Detune
+NRPN  63                       |     3    | Envelope Generator Rate 1
+NRPN  64                       |     3    | Envelope Generator Rate 2
+NRPN  65                       |     3    | Envelope Generator Rate 3
+NRPN  66                       |     3    | Envelope Generator Rate 4
+NRPN  67                       |     3    | Envelope Generator Level 1
+NRPN  68                       |     3    | Envelope Generator Level 2
+NRPN  69                       |     3    | Envelope Generator Level 3
+NRPN  70                       |     3    | Envelope Generator Level 4
+NRPN  71                       |     3    | Keyboard Level Scaling Break Point
+NRPN  72                       |     3    | Keyboard Level Scaling Left Depth
+NRPN  73                       |     3    | Keyboard Level Scaling Right Depth
+NRPN  74                       |     3    | Keyboard Level Scaling Left Curve
+NRPN  75                       |     3    | Keyboard Level Scaling Right Curve
+NRPN  76                       |     3    | Keyboard Rate Scaling
+NRPN  77                       |     3    | Amp Mod Sensitivity   
+NRPN  78                       |     3    | Keyboard Velocity Sensitivity
+NRPN  79                       |     3    | Operator Output Level  
+NRPN  80                       |   * 3    | Oscillator Mode
+NRPN  81                       |   * 3    | Oscillator Frequency Coarse
+NRPN  82                       |   * 3    | Oscillator Frequency Fine
+NRPN  83                       |   * 3    | Oscillator Detune
+NRPN  84                       |     2    | Envelope Generator Rate 1
+NRPN  85                       |     2    | Envelope Generator Rate 2
+NRPN  86                       |     2    | Envelope Generator Rate 3
+NRPN  87                       |     2    | Envelope Generator Rate 4
+NRPN  88                       |     2    | Envelope Generator Level 1
+NRPN  89                       |     2    | Envelope Generator Level 2
+NRPN  90                       |     2    | Envelope Generator Level 3
+NRPN  91                       |     2    | Envelope Generator Level 4
+NRPN  92                       |     2    | Keyboard Level Scaling Break Point
+NRPN  93                       |     2    | Keyboard Level Scaling Left Depth
+NRPN  94                       |     2    | Keyboard Level Scaling Right Depth
+NRPN  95                       |     2    | Keyboard Level Scaling Left Curve
+NRPN  96                       |     2    | Keyboard Level Scaling Right Curve
+NRPN  97                       |     2    | Keyboard Rate Scaling
+NRPN  98                       |     2    | Amp Mod Sensitivity   
+NRPN  99                       |     2    | Keyboard Velocity Sensitivity
+NRPN 100                       |     2    | Operator Output Level  
+NRPN 101                       |   * 2    | Oscillator Mode
+NRPN 102                       |   * 2    | Oscillator Frequency Coarse
+NRPN 103                       |   * 2    | Oscillator Frequency Fine
+NRPN 104                       |   * 2    | Oscillator Detune
+NRPN 105                       |     1    | Envelope Generator Rate 1
+NRPN 106                       |     1    | Envelope Generator Rate 2
+NRPN 107                       |     1    | Envelope Generator Rate 3
+NRPN 108                       |     1    | Envelope Generator Rate 4
+NRPN 109                       |     1    | Envelope Generator Level 1
+NRPN 110                       |     1    | Envelope Generator Level 2
+NRPN 111                       |     1    | Envelope Generator Level 3
+NRPN 112                       |     1    | Envelope Generator Level 4
+NRPN 113                       |     1    | Keyboard Level Scaling Break Point
+NRPN 114                       |     1    | Keyboard Level Scaling Left Depth
+NRPN 115                       |     1    | Keyboard Level Scaling Right Depth
+NRPN 116                       |     1    | Keyboard Level Scaling Left Curve
+NRPN 117                       |     1    | Keyboard Level Scaling Right Curve
+NRPN 118                       |     1    | Keyboard Rate Scaling
+NRPN 119                       |     1    | Amp Mod Sensitivity   
+NRPN 120                       |     1    | Keyboard Velocity Sensitivity
+NRPN 121                       |     1    | Operator Output Level  
+NRPN 122                       |   * 1    | Oscillator Mode
+NRPN 123                       |   * 1    | Oscillator Frequency Coarse
+NRPN 124                       |   * 1    | Oscillator Frequency Fine
+NRPN 125                       |   * 1    | Oscillator Detune
+
+Fixed Point vs. Floating Point Rendering
+========================================
+hexter can be compiled to do its sound rendering using either
+fixed-point math or floating-point math.  The difference in sound
+quality should not be audible, so the question of which type of math
+to use becomes which type of math is faster. On many older
+processors (e.g. PowerPC G4), the fixed-point math is substantially
+faster. With newer processors, floating-point math is usually
+faster--but not always!
+
+On fairly normal posix systems (like Linux or OS X), you can compile
+a small test program, to test which type of math is the fastest on
+your processor.  To do this, unpack the hexter tarball, cd into the
+'fptest' directory, type 'make', then type './fptest'. After 30-60
+seconds, you should see a summary of the test results.
+
+By default, hexter is built to use fixed-point rendering. If your
+test results say that floating-point is faster, then you can
+configure hexter to use floating-point with the
+'--enable-floating-point' configure option.
+
+Here are some test results from a few machines. Lower percentages
+indicate the faster mode.
+
+Processor                           Fixed Point  Floating Point
+----------------------------------  -----------  --------------
+PowerPC G4 800MHz                      49.5%        100.0%
+- with -mcpu=G4                        48.7%        100.0%
+PowerPC G4 1.07GHz                     49.8%        100.0%
+Pentium III (Coppermine) 933MHz       100.0%         95.2%
+- with -march=native -mtune=native    100.0%         95.4%
+Intel Core Duo 1.83GHz                100.0%         92.9%
 
 Frequently Asked Questions
 ==========================

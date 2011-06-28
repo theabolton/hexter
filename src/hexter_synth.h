@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004, 2009 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2011 Sean Bolton and others.
  *
  * Portions of this file may have come from Peter Hanappe's
  * Fluidsynth, copyright (C) 2003 Peter Hanappe and others.
@@ -54,8 +54,8 @@ struct _hexter_instance_t
 
     float           sample_rate;  
     float           nugget_rate;       /* nuggets per second */
-    uint32_t        ramp_duration;     /* frames per ramp for mods and volume */
-    int32_t         dx7_eg_max_slew;   /* max op eg increment, in s7.24 units per frame */
+    int32_t         ramp_duration;     /* frames per ramp for mods and volume */
+    dx7_sample_t    dx7_eg_max_slew;   /* max op eg increment, in units per frame */
 
     /* voice tracking */
     int             polyphony;         /* requested polyphony, must be <= HEXTER_MAX_POLYPHONY */
@@ -111,20 +111,20 @@ struct _hexter_instance_t
     uint8_t         lfo_speed;
     uint8_t         lfo_wave;
     uint8_t         lfo_delay;
-    int32_t         lfo_delay_value[3];
-    uint32_t        lfo_delay_duration[3];
-    int32_t         lfo_delay_increment[3];
+    dx7_sample_t    lfo_delay_value[3];
+    int32_t         lfo_delay_duration[3];
+    dx7_sample_t    lfo_delay_increment[3];
     int32_t         lfo_phase;
-    int32_t         lfo_value;
+    dx7_sample_t    lfo_value;
     double          lfo_value_for_pitch;      /* no delay, unramped */
-    uint32_t        lfo_duration;
-    int32_t         lfo_increment;
-    int32_t         lfo_target;
-    int32_t         lfo_increment0;
-    int32_t         lfo_increment1;
-    uint32_t        lfo_duration0;
-    uint32_t        lfo_duration1;
-    int32_t         lfo_buffer[HEXTER_NUGGET_SIZE];
+    int32_t         lfo_duration;
+    dx7_sample_t    lfo_increment;
+    dx7_sample_t    lfo_target;
+    dx7_sample_t    lfo_increment0;
+    dx7_sample_t    lfo_increment1;
+    int32_t         lfo_duration0;
+    int32_t         lfo_duration1;
+    dx7_sample_t    lfo_buffer[HEXTER_NUGGET_SIZE];
 };
 
 /*
@@ -189,22 +189,28 @@ void  hexter_synth_render_voices(unsigned long samples_done,
 
 /* these come right out of alsa/asoundef.h */
 #define MIDI_CTL_MSB_MODWHEEL           0x01    /**< Modulation */
-#define MIDI_CTL_MSB_BREATH           	0x02	/**< Breath */
-#define MIDI_CTL_MSB_FOOT             	0x04	/**< Foot */
+#define MIDI_CTL_MSB_BREATH             0x02    /**< Breath */
+#define MIDI_CTL_MSB_FOOT               0x04    /**< Foot */
 /* -FIX- support 5 portamento time */
+#define MIDI_CTL_MSB_DATA_ENTRY         0x06    /**< Data entry */
 #define MIDI_CTL_MSB_MAIN_VOLUME        0x07    /**< Main volume */
 #define MIDI_CTL_MSB_GENERAL_PURPOSE1   0x10    /**< General purpose 1 */
 #define MIDI_CTL_MSB_GENERAL_PURPOSE2   0x11    /**< General purpose 2 */
 #define MIDI_CTL_MSB_GENERAL_PURPOSE3   0x12    /**< General purpose 3 */
 #define MIDI_CTL_MSB_GENERAL_PURPOSE4   0x13    /**< General purpose 4 */
 #define MIDI_CTL_LSB_MODWHEEL           0x21    /**< Modulation */
-#define MIDI_CTL_LSB_BREATH           	0x22	/**< Breath */
-#define MIDI_CTL_LSB_FOOT             	0x24	/**< Foot */
+#define MIDI_CTL_LSB_BREATH             0x22    /**< Breath */
+#define MIDI_CTL_LSB_FOOT               0x24    /**< Foot */
+#define MIDI_CTL_LSB_DATA_ENTRY         0x26    /**< Data entry */
 #define MIDI_CTL_LSB_MAIN_VOLUME        0x27    /**< Main volume */
 #define MIDI_CTL_SUSTAIN                0x40    /**< Sustain pedal */
 /* -FIX- support 65(?) portamento switch */
 #define MIDI_CTL_GENERAL_PURPOSE5       0x50    /**< General purpose 5 */
 #define MIDI_CTL_GENERAL_PURPOSE6       0x51    /**< General purpose 6 */
+#define MIDI_CTL_NONREG_PARM_NUM_LSB    0x62    /**< Non-registered parameter number */
+#define MIDI_CTL_NONREG_PARM_NUM_MSB    0x63    /**< Non-registered parameter number */
+#define MIDI_CTL_REGIST_PARM_NUM_LSB    0x64    /**< Registered parameter number */
+#define MIDI_CTL_REGIST_PARM_NUM_MSB    0x65    /**< Registered parameter number */
 #define MIDI_CTL_ALL_SOUNDS_OFF         0x78    /**< All sounds off */
 #define MIDI_CTL_RESET_CONTROLLERS      0x79    /**< Reset Controllers */
 #define MIDI_CTL_ALL_NOTES_OFF          0x7b    /**< All notes off */
