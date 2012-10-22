@@ -1,3 +1,7 @@
+20121022 smbolton
+
+* More patch loading enhancements from Martin Tarenskeen.
+
 20110628 CVS commit smbolton (0.6.9.0)
 
 * MIDI non-registered parameters (NRPNs) can now be used to change

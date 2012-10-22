@@ -1148,6 +1148,7 @@ Load(char *filename)
         return 0;
     }
     fclose(fp);
+    filename_length = strlen (filename);
 
     /* check if the file is a standard MIDI file */
     if (raw_patch_data[0] == 0x4d &&	/* "M" */
@@ -1201,13 +1202,23 @@ Load(char *filename)
         count = filelength / DX7_VOICE_SIZE_PACKED;
 
     /* Dr.T TX7 file needs special treatment */
-    filename_length = strlen (filename);
     if ((!strcmp(filename + filename_length - 4, ".TX7") ||
          !strcmp(filename + filename_length - 4, ".tx7")) && filelength == 8192) {
 
         count = 32;
         filelength = 4096;
     }
+
+    /* Transform XSyn file also needs special treatment */
+     if ((!strcmp(filename + filename_length - 4, ".BNK") ||
+          !strcmp(filename + filename_length - 4, ".bnk")) && filelength == 8192) {
+         for (i=0; i<32; i++)
+         {
+             memmove(raw_patch_data + 128*i, raw_patch_data + 256*i, 128);
+         }
+         count = 32;
+         filelength = 4096;
+     }
 
     /* Steinberg Synthworks DX7 SND */
     if ((!strcmp (filename + filename_length - 4, ".SND") ||
@@ -1217,8 +1228,9 @@ Load(char *filename)
         filelength = 4096;
     }
 
-    /* Voyetra SIDEMAN DX/TX */
-    if (filelength == 9816 &&
+    /* Voyetra SIDEMAN DX/TX 
+     * Voyetra Patchmaster DX7/TX7 */
+    if ((filelength == 9816 || filelength == 5663) &&
         raw_patch_data[0] == 0xdf &&
         raw_patch_data[1] == 0x05 &&
         raw_patch_data[2] == 0x01 && raw_patch_data[3] == 0x00) {
