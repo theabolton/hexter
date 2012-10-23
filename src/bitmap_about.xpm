@@ -1,5 +1,5 @@
 /* XPM */
-static char * hexter_about_2012_xpm[] = {
+static char * bitmap_about_xpm[] = {
 "396 172 90 1",
 " 	c #000100",
 ".	c #080B07",
