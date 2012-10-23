@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(hexter, 0.6.9.0, musound-at-jps-dot-net)
+AC_INIT(hexter, 0.6.9.1, musound-at-jps-dot-net)
 
 AC_CONFIG_SRCDIR(src/hexter.c)
 AM_INIT_AUTOMAKE
@@ -72,8 +72,11 @@ case "${host_os}" in
 darwin*)
   darwin=yes
   PKG_CHECK_MODULES(ALSA, libdssialsacompat)
-  #AC_DEFINE(DARWIN, 1, [Define if building for Mac OS X Darwin])
   AC_DEFINE(MIDI_COREMIDI, 1, [Define for CoreMIDI MIDI support])
+  ;;
+freebsd*)
+  darwin=no
+  PKG_CHECK_MODULES(ALSA, libdssialsacompat)
   ;;
 *)
   darwin=no
