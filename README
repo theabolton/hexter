@@ -170,10 +170,17 @@ file will be ignored (Dr. T TX7 format).
 message or a single voice dump sys-ex message.  If the file contains
 more than one qualifying sys-ex message, only the first will be used.
 
-- Voyetra SIDEMAN DX/TX format (9816 bytes long).
-
 - Two concatenated 32-voice bulk dump sys-ex messages (8208 bytes
 long.)
+
+- Steinberg Synthworks format (5216 bytes long).
+
+- Transform XSyn format (8192 bytes long).
+
+- Voyetra SIDEMAN DX/TX and Patchmaster DX7/TX7 formats (9816
+or 5663 bytes long).
+
+- Yamaha DX200 editor format (326454 bytes long).</p>
 
 You may use the "Import Patch Bank..." option in the File menu to
 import patches.  After selecting the filename, you will need to
