@@ -449,8 +449,10 @@ fixed-point math or floating-point math.  The difference in sound
 quality should not be audible, so the question of which type of math
 to use becomes which type of math is faster. On many older
 processors (e.g. PowerPC G4), the fixed-point math is substantially
-faster. With newer processors, floating-point math is usually
-faster--but not always!
+faster. With newer processors, the speed of each type of math
+depends on several factors, including the particular processor, the
+compiler and the compiler options used.  It is often surprising
+which is faster for a given configuration!
 
 On fairly normal posix systems (like Linux or OS X), you can compile
 a small test program, to test which type of math is the fastest on
@@ -466,14 +468,18 @@ configure hexter to use floating-point with the
 Here are some test results from a few machines. Lower percentages
 indicate the faster mode.
 
-Processor                           Fixed Point  Floating Point
-----------------------------------  -----------  --------------
-PowerPC G4 800MHz                      49.5%        100.0%
-- with -mcpu=G4                        48.7%        100.0%
-PowerPC G4 1.07GHz                     49.8%        100.0%
-Pentium III (Coppermine) 933MHz       100.0%         95.2%
-- with -march=native -mtune=native    100.0%         95.4%
-Intel Core Duo 1.83GHz                100.0%         92.9%
+Processor                              Fixed Point  Floating Point
+-------------------------------------  -----------  --------------
+PowerPC G4 800MHz                         49.5%        100.0%
+PowerPC G4 1.07GHz                        49.8%        100.0%
+Pentium III (Coppermine) 933MHz          100.0%         95.2%
+Intel Core Duo 1.83GHz, OS X 10.4.9      100.0%         92.9%
+Intel Core 2 Duo 2.4GHz, Linux 3.2       100.0%         96.1% *
+Intel Core 2 Duo 2.4GHz, OS X 10.4.11    100.0%         91.4% *
+Intel Core 2 Duo 2.4GHz, OS X 10.6.8      61.5%        100.0% *
+Intel Core 2 Duo 2.5GHz, OS X 10.6.7      62.0%        100.0%
+
+* These three all come from the same machine!
 
 Frequently Asked Questions
 ==========================
