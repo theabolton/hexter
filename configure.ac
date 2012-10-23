@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(hexter, 0.6.9.1, musound-at-jps-dot-net)
+AC_INIT(hexter, 0.6.9.1, sean-at-smbolton-dot-com)
 
 AC_CONFIG_SRCDIR(src/hexter.c)
 AM_INIT_AUTOMAKE

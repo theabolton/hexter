@@ -1,6 +1,7 @@
 /* Yamaha DX7 / TX7 Editor/Librarian
  *
- * Copyright (C) 1991, 1995, 1997, 1998, 2004, 2009, 2011 Sean Bolton.
+ * Copyright (C) 1991, 1995, 1997, 1998, 2004, 2009, 2011,
+ * 2012 Sean Bolton.
  *
  * This is an ncurses-based patch editor for the Yamaha DX7 and
  * TX7.  It is provided as-is, without any documentation, and
@@ -36,6 +37,7 @@
  *                        enhancements
  * 20110215 Sean Bolton - incorporated more patch loading enhancements
  *                        from Martin Tarenskeen.
+ * 20121022 Sean Bolton - and yet more from Martin.
  */
 
 /* Need to do:                              */

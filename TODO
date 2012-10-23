@@ -4,9 +4,6 @@ hexter To-Do list, in no particular order:
 
 * Optionally sort patch list alphabetically (Steve Harris).
 
-* implement amplitude modulation, LFOs, and mod source routing (mod
-    wheel, breath controller, foot pedal).
-
 * optimize so if a voice just being set up still has all the
     patch data for the current edit buffer, we skip loading it.
 

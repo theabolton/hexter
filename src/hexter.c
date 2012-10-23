@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004, 2009, 2011 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2011, 2012 Sean Bolton and others.
  *
  * Portions of this file may have come from Peter Hanappe's
  * Fluidsynth, copyright (C) 2003 Peter Hanappe and others.
@@ -607,7 +607,7 @@ void _init()
         hexter_LADSPA_descriptor->Label = "hexter";
         hexter_LADSPA_descriptor->Properties = 0;
         hexter_LADSPA_descriptor->Name = "hexter DX7 emulation (v" VERSION ")";
-        hexter_LADSPA_descriptor->Maker = "Sean Bolton <musound AT jps DOT net>";
+        hexter_LADSPA_descriptor->Maker = "Sean Bolton <sean AT smbolton DOT com>";
         hexter_LADSPA_descriptor->Copyright = "GNU General Public License version 2 or later";
         hexter_LADSPA_descriptor->PortCount = HEXTER_PORTS_COUNT;
 
