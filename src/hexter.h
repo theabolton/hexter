@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004, 2009 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2012 Sean Bolton and others.
  *
  * Portions of this file may have come from Chris Cannam and Steve
  * Harris's public domain DSSI example code.
@@ -67,6 +67,14 @@
 #define DSSP_DEBUG_INIT(x)
 
 #endif  /* DSSP_DEBUG */
+
+/* Define this to enable some non-real-time-safe sanity checks (e.g. envelope
+ * slew limits) within the plugin synthesis code: */
+// #define HEXTER_DEBUG_ENGINE
+
+/* Define this to enable some non-real-time-safe MIDI controller testing
+ * code: */
+// #define HEXTER_DEBUG_CONTROL
 
 /* ==== end of debugging ==== */
 

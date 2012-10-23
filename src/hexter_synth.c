@@ -407,6 +407,10 @@ hexter_instance_update_mod_wheel(hexter_instance_t* instance)
     instance->mod_wheel = (float)mod / 16256.0f;
     instance->mods_serial++;
 
+#ifdef HEXTER_DEBUG_CONTROL
+    instance->feedback_mod = instance->cc[MIDI_CTL_MSB_MODWHEEL];
+    printf("new mod wheel value %d\n", instance->feedback_mod);
+#endif
 }
 
 /*
@@ -634,6 +638,10 @@ hexter_instance_handle_nrpn(hexter_instance_t *instance)
     hexter_instance_update_op_param(instance, 5 - opnum, op_param, value);
 }
 
+#ifdef HEXTER_DEBUG_CONTROL
+void dx7_lfo_set_speed_x(hexter_instance_t *instance);  /* prototype for test code below */
+#endif
+
 /*
  * hexter_instance_control_change
  */
@@ -680,6 +688,29 @@ hexter_instance_control_change(hexter_instance_t *instance, unsigned int param,
     instance->cc[param] = value;
 
     switch (param) {
+
+#ifdef HEXTER_DEBUG_CONTROL
+      case MIDI_CTL_MSB_PAN: /* panning */
+        // hexter_instance_channel_pressure(instance, value);
+        // { float f;
+        //     f = 52.75f / (instance->sample_rate * 0.001f * (float)value);
+        //     instance->amp_mod_max_slew = FLOAT_TO_FP(f);
+        //     printf("new amp_mod_max_slew, %dms => %f = %d\n", value, f, instance->amp_mod_max_slew);
+        // }
+        {
+            if (value == 0)
+                instance->ramp_duration = 1;
+            else
+                instance->ramp_duration = (int)(instance->sample_rate * 0.001f * (float)value);  /* value ms ramp */
+            printf("new ramp_duration, %dms => %d frames\n", value, instance->ramp_duration);
+            dx7_lfo_set_speed_x(instance);
+        }
+        break;
+
+      case MIDI_CTL_MSB_EXPRESSION: /* 'expression' */
+        hexter_instance_key_pressure(instance, 60, value);
+        break;
+#endif /* HEXTER_DEBUG_CONTROL */
 
       case MIDI_CTL_MSB_MODWHEEL:
       case MIDI_CTL_LSB_MODWHEEL:

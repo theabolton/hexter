@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004, 2009, 2011 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2011, 2012 Sean Bolton and others.
  *
  * Portions of this file may have come from Peter Hanappe's
  * Fluidsynth, copyright (C) 2003 Peter Hanappe and others.
@@ -125,6 +125,9 @@ struct _hexter_instance_t
     int32_t         lfo_duration0;
     int32_t         lfo_duration1;
     dx7_sample_t    lfo_buffer[HEXTER_NUGGET_SIZE];
+#ifdef HEXTER_DEBUG_CONTROL
+    dx7_sample_t    feedback_mod;
+#endif
 };
 
 /*
@@ -194,6 +197,8 @@ void  hexter_synth_render_voices(unsigned long samples_done,
 /* -FIX- support 5 portamento time */
 #define MIDI_CTL_MSB_DATA_ENTRY         0x06    /**< Data entry */
 #define MIDI_CTL_MSB_MAIN_VOLUME        0x07    /**< Main volume */
+#define MIDI_CTL_MSB_PAN                0x0a    /**< Panpot */
+#define MIDI_CTL_MSB_EXPRESSION         0x0b    /**< Expression */
 #define MIDI_CTL_MSB_GENERAL_PURPOSE1   0x10    /**< General purpose 1 */
 #define MIDI_CTL_MSB_GENERAL_PURPOSE2   0x11    /**< General purpose 2 */
 #define MIDI_CTL_MSB_GENERAL_PURPOSE3   0x12    /**< General purpose 3 */

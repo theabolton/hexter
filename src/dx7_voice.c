@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004, 2009, 2011 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2011, 2012 Sean Bolton and others.
  *
  * Portions of this file may have come from Juan Linietsky's
  * rx-saturno, copyright (C) 2002 by Juan Linietsky.
@@ -238,6 +238,13 @@ dx7_voice_release_note(hexter_instance_t *instance, dx7_voice_t *voice)
 
 /* ===== operator (amplitude) envelope functions ===== */
 
+#ifdef HEXTER_DEBUG_ENGINE
+#define HEXTER_DEBUG_ENGINE_SLEW_CHECK(inc, msg) \
+    if (FP_ABS(inc) >= instance->dx7_eg_max_slew) printf(msg "\n");
+#else
+#define HEXTER_DEBUG_ENGINE_SLEW_CHECK(inc, msg)
+#endif
+
 /*
  * dx7_op_eg_set_increment
  */
@@ -313,6 +320,7 @@ dx7_op_eg_set_increment(hexter_instance_t *instance, dx7_op_eg_t *eg,
                 eg->duration = FP_DIVIDE_CEIL(eg->target - eg->value, instance->dx7_eg_max_slew);
                 eg->increment = (eg->target - eg->value) / (dx7_sample_t)eg->duration;
             }
+            HEXTER_DEBUG_ENGINE_SLEW_CHECK(eg->increment, "slew violation 0");
             eg->in_precomp = 0;
 
         } else if (precomp_duration < 1) {
@@ -322,6 +330,7 @@ dx7_op_eg_set_increment(hexter_instance_t *instance, dx7_op_eg_t *eg,
                 eg->duration = FP_DIVIDE_CEIL(eg->target - eg->value, instance->dx7_eg_max_slew);
                 eg->increment = (eg->target - eg->value) / (dx7_sample_t)eg->duration;
             }
+            HEXTER_DEBUG_ENGINE_SLEW_CHECK(eg->increment, "slew violation 1");
             eg->in_precomp = 0;
 
         } else {
@@ -329,6 +338,7 @@ dx7_op_eg_set_increment(hexter_instance_t *instance, dx7_op_eg_t *eg,
             eg->postcomp_duration = eg->duration - precomp_duration;
             eg->duration = precomp_duration;
             eg->increment = (INT_TO_FP(31) - eg->value) / (dx7_sample_t)precomp_duration;
+            HEXTER_DEBUG_ENGINE_SLEW_CHECK(eg->increment, "slew violation Pa");
             eg->postcomp_increment = (eg->target - INT_TO_FP(31)) /
                                          (dx7_sample_t)eg->postcomp_duration;
             if (eg->postcomp_increment > instance->dx7_eg_max_slew) {
@@ -336,6 +346,7 @@ dx7_op_eg_set_increment(hexter_instance_t *instance, dx7_op_eg_t *eg,
                 eg->postcomp_increment = (eg->target - INT_TO_FP(31)) /
                                              (dx7_sample_t)eg->postcomp_duration;
             }
+            HEXTER_DEBUG_ENGINE_SLEW_CHECK(eg->postcomp_increment, "slew violation Pb");
             eg->in_precomp = 1;
 
         }
@@ -347,9 +358,21 @@ dx7_op_eg_set_increment(hexter_instance_t *instance, dx7_op_eg_t *eg,
             eg->duration = FP_DIVIDE_CEIL(FP_ABS(eg->target - eg->value), instance->dx7_eg_max_slew);
             eg->increment = (eg->target - eg->value) / (dx7_sample_t)eg->duration;
         }
+        HEXTER_DEBUG_ENGINE_SLEW_CHECK(eg->increment, "slew violation 2");
         eg->in_precomp = 0;
 
     }
+#ifdef HEXTER_DEBUG_ENGINE
+    if (eg->duration <= 0 || FP_ABS(eg->increment) >= instance->dx7_eg_max_slew)
+#ifndef HEXTER_USE_FLOATING_POINT
+        printf("eg error: rate %d, current %f, new %d, duration %d (%f), increment %d, in_precomp %d, postcomp_dur %d, postcomp_inc %d\n",
+               new_rate, FP_TO_DOUBLE(eg->value), new_level, eg->duration, duration,
+#else /* HEXTER_USE_FLOATING_POINT */
+        printf("eg error: rate %d, current %f, new %d, duration %d (%f), increment %f, in_precomp %d, postcomp_dur %d, postcomp_inc %f\n",
+               new_rate, eg->value, new_level, eg->duration, duration,
+#endif /* HEXTER_USE_FLOATING_POINT */
+               eg->increment, eg->in_precomp, eg->postcomp_duration, eg->postcomp_increment);
+#endif /* HEXTER_DEBUG_ENGINE */
 }
 
 /*
@@ -368,10 +391,23 @@ dx7_op_eg_set_next_phase(hexter_instance_t *instance, dx7_op_eg_t *eg)
 	dx7_op_eg_set_increment(instance, eg, eg->rate[eg->phase], eg->level[eg->phase]);
 #ifndef HEXTER_USE_FLOATING_POINT
         if (eg->duration == 1 && eg->increment == 0)
+            dx7_op_eg_set_next_phase(instance, eg);
+#ifdef HEXTER_DEBUG_ENGINE
+        if (eg->mode == DX7_EG_RUNNING && eg->duration == 1 && eg->increment == 0)
+            printf("eg error: phase %d, current %d (%f), new %d (%f), duration %d, increment %d, in_precomp %d, postcomp_dur %d, postcomp_inc %d\n",
+                   eg->phase, eg->value, FP_TO_DOUBLE(eg->value), eg->target, FP_TO_DOUBLE(eg->target), eg->duration,
+                   eg->increment, eg->in_precomp, eg->postcomp_duration, eg->postcomp_increment);
+#endif /* HEXTER_DEBUG_ENGINE */
 #else /* HEXTER_USE_FLOATING_POINT */
         if (eg->duration == 1 && fabsf(eg->increment) < 1e-10f)
-#endif /* HEXTER_USE_FLOATING_POINT */
             dx7_op_eg_set_next_phase(instance, eg);
+#ifdef HEXTER_DEBUG_ENGINE
+        if (eg->mode == DX7_EG_RUNNING && eg->duration == 1 && eg->increment == 0)
+            printf("eg error: phase %d, current %f, new %f, duration %d, increment %f, in_precomp %d, postcomp_dur %d, postcomp_inc %f\n",
+                   eg->phase, eg->value, eg->target, eg->duration,
+                   eg->increment, eg->in_precomp, eg->postcomp_duration, eg->postcomp_increment);
+#endif /* HEXTER_DEBUG_ENGINE */
+#endif /* HEXTER_USE_FLOATING_POINT */
         break;
 
       case 2:
@@ -412,10 +448,23 @@ dx7_op_eg_set_phase(hexter_instance_t *instance, dx7_op_eg_t *eg, int phase)
             dx7_op_eg_set_increment(instance, eg, eg->rate[phase], eg->level[phase]);
 #ifndef HEXTER_USE_FLOATING_POINT
             if (eg->duration == 1 && eg->increment == 0)
+                dx7_op_eg_set_next_phase(instance, eg);
+#ifdef HEXTER_DEBUG_ENGINE
+            if (eg->mode == DX7_EG_RUNNING && eg->duration == 1 && eg->increment == 0)
+                printf("eg error: phase %d, current %d (%f), new %d (%f), duration %d, increment %d, in_precomp %d, postcomp_dur %d, postcomp_inc %d\n",
+                       eg->phase, eg->value, FP_TO_DOUBLE(eg->value), eg->target, FP_TO_DOUBLE(eg->target), eg->duration,
+                       eg->increment, eg->in_precomp, eg->postcomp_duration, eg->postcomp_increment);
+#endif /* HEXTER_DEBUG_ENGINE */
 #else /* HEXTER_USE_FLOATING_POINT */
             if (eg->duration == 1 && fabsf(eg->increment) < 1e-10f)
-#endif /* HEXTER_USE_FLOATING_POINT */
                 dx7_op_eg_set_next_phase(instance, eg);
+#ifdef HEXTER_DEBUG_ENGINE
+            if (eg->mode == DX7_EG_RUNNING && eg->duration == 1 && eg->increment == 0)
+                printf("eg error: phase %d, current %f, new %f, duration %d, increment %f, in_precomp %d, postcomp_dur %d, postcomp_inc %f\n",
+                       eg->phase, eg->value, eg->target, eg->duration,
+                       eg->increment, eg->in_precomp, eg->postcomp_duration, eg->postcomp_increment);
+#endif /* HEXTER_DEBUG_ENGINE */
+#endif /* HEXTER_USE_FLOATING_POINT */
 
         }
     } else {
@@ -426,10 +475,23 @@ dx7_op_eg_set_phase(hexter_instance_t *instance, dx7_op_eg_t *eg, int phase)
             dx7_op_eg_set_increment(instance, eg, eg->rate[phase], eg->level[phase]);
 #ifndef HEXTER_USE_FLOATING_POINT
             if (eg->duration == 1 && eg->increment == 0)
+                dx7_op_eg_set_next_phase(instance, eg);
+#ifdef HEXTER_DEBUG_ENGINE
+            if (eg->mode == DX7_EG_RUNNING && eg->duration == 1 && eg->increment == 0)
+                printf("eg error: phase %d, current %d (%f), new %d (%f), duration %d, increment %d, in_precomp %d, postcomp_dur %d, postcomp_inc %d\n",
+                       eg->phase, eg->value, FP_TO_DOUBLE(eg->value), eg->target, FP_TO_DOUBLE(eg->target), eg->duration,
+                       eg->increment, eg->in_precomp, eg->postcomp_duration, eg->postcomp_increment);
+#endif /* HEXTER_DEBUG_ENGINE */
 #else /* HEXTER_USE_FLOATING_POINT */
             if (eg->duration == 1 && fabsf(eg->increment) < 1e-10f)
-#endif /* HEXTER_USE_FLOATING_POINT */
                 dx7_op_eg_set_next_phase(instance, eg);
+#ifdef HEXTER_DEBUG_ENGINE
+            if (eg->mode == DX7_EG_RUNNING && eg->duration == 1 && eg->increment == 0)
+                printf("eg error: phase %d, current %f, new %f, duration %d, increment %f, in_precomp %d, postcomp_dur %d, postcomp_inc %f\n",
+                       eg->phase, eg->value, eg->target, eg->duration,
+                       eg->increment, eg->in_precomp, eg->postcomp_duration, eg->postcomp_increment);
+#endif /* HEXTER_DEBUG_ENGINE */
+#endif /* HEXTER_USE_FLOATING_POINT */
 
         }
     }
@@ -534,6 +596,9 @@ dx7_op_envelope_prepare(hexter_instance_t *instance, dx7_op_t *op,
         op->eg.rate[i] = op->eg.base_rate[i] + rate_bump;
         if (op->eg.rate[i] > 99) op->eg.rate[i] = 99;
 
+#ifdef HEXTER_DEBUG_ENGINE
+        /* printf("  rate[%d]=%d, level[%d]=%d (output_level=%d, rate_bump=%d)\n", i, op->eg.rate[i], i, op->eg.level[i], op->output_level, rate_bump); */
+#endif
     }
 
     op->eg.value = INT_TO_FP(op->eg.level[3]);
@@ -589,6 +654,11 @@ dx7_pitch_eg_set_increment(hexter_instance_t *instance, dx7_pitch_eg_t *eg,
         eg->increment = eg->target - eg->value;
 
     }
+#ifdef HEXTER_DEBUG_ENGINE
+    if (fabs(eg->increment) < 64.0 && eg->duration != 1)
+        printf("pitch eg: rate = %d, current = %f, target = %f, duration = %f => %d, increment = %f\n",
+               new_rate, eg->value, eg->target, duration, eg->duration, eg->increment);
+#endif
 }
 
 /*
@@ -726,6 +796,14 @@ dx7_op_recalculate_increment(hexter_instance_t *instance, dx7_op_t *op)
 
     }
     op->phase_increment = DOUBLE_TO_FP(freq / (double)instance->sample_rate);
+#ifdef HEXTER_DEBUG_ENGINE
+#ifndef HEXTER_USE_FLOATING_POINT
+    /* printf("freq=%10.6f, detune=%d, coarse=%d, fine=%d, phase_increment=%d\n", op->frequency, op->detune, */
+#else /* HEXTER_USE_FLOATING_POINT */
+    /* printf("freq=%10.6f, detune=%d, coarse=%d, fine=%d, phase_increment=%g\n", op->frequency, op->detune, */
+#endif /* HEXTER_USE_FLOATING_POINT */
+    /*        op->coarse, op->fine, op->phase_increment); */
+#endif /* HEXTER_DEBUG_ENGINE */
 }
 
 double
@@ -898,6 +976,11 @@ dx7_lfo_set_speed(hexter_instance_t *instance)
         break;
     }
 }
+
+#ifdef HEXTER_DEBUG_CONTROL
+/* for debug code in hexter_synth.c */
+void dx7_lfo_set_speed_x(hexter_instance_t *instance) { dx7_lfo_set_speed(instance); }
+#endif
 
 /*
  * dx7_lfo_reset
