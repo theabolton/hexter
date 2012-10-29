@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer text-mode UI
  *
- * Copyright (C) 2004, 2009 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2012 Sean Bolton and others.
  *
  * Portions of this file came from readline 4.3, copyright
  * (c) 1987-2002 Free Software Foundation, Inc.
@@ -109,7 +109,7 @@ command_program(char *args)
 
     if (edit_buffer_active && current_program != edit_buffer.program) {
 
-        gui_data_clear_edit_buffer();
+        gui_data_send_edit_buffer_off();
 
         /* -FIX- update UI display to say "no active edits" */
 
@@ -377,7 +377,7 @@ update_from_program_select(unsigned long bank, unsigned long program)
 
         if (edit_buffer_active && program != edit_buffer.program) {
 
-            gui_data_clear_edit_buffer();
+            gui_data_send_edit_buffer_off();
 
             /* -FIX- update UI display to say "no active edits" */
 

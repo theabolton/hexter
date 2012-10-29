@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004, 2009 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2012 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -31,7 +31,7 @@
 
 typedef struct {
     int     program;
-    uint8_t buffer[DX7_VOICE_SIZE_UNPACKED];
+    uint8_t voice[DX7_VOICE_SIZE_UNPACKED];
 } edit_buffer_t;
 
 extern char *user_friendly_id;
@@ -57,7 +57,6 @@ extern int           current_program;
 
 extern int           edit_buffer_active;
 extern edit_buffer_t edit_buffer;
-extern int           edit_receive_channel;
 
 #endif /* _GUI_MAIN_H */
 

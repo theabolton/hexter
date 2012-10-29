@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004, 2009 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2012 Sean Bolton and others.
  *
  * Portions of this file may have come from specimen, copyright
  * (c) 2004 Pete Bessman under the GNU General Public License
@@ -118,7 +118,6 @@ sysex_stop(void)
 
 #else /* MIDI_ALSA */
 
-#include "gui_main.h"
 #include "gui_midi.h"
 
 int sysex_enabled = 0;

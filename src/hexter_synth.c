@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004, 2009, 2011 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2011, 2012 Sean Bolton and others.
  *
  * Portions of this file may have come from Peter Hanappe's
  * Fluidsynth, copyright (C) 2003 Peter Hanappe and others.
@@ -897,6 +897,7 @@ hexter_instance_set_program_descriptor(hexter_instance_t *instance,
     }
     pd->Bank = bank;
     pd->Program = program;
+    /* -FIX- some character set conversion would be appropriate here, but to what? */
     dx7_voice_copy_name(name, &instance->patches[program]);
     pd->Name = name;
     return 1;

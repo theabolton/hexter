@@ -471,80 +471,6 @@ gui_data_load(const char *filename, int position, char **message)
     return tmpcount;
 }
 
-/* ==== DX7 MIDI system exclusive message handling ==== */
-
-void
-gui_data_set_up_edit_buffer(int copy_current_program)
-{
-    if (!edit_buffer_active) {
-        edit_buffer.program = current_program;
-        if (copy_current_program) {
-            dx7_patch_unpack(patches, current_program, edit_buffer.buffer);
-        }
-        edit_buffer_active = 1;
-    }
-}
-
-int
-gui_data_sysex_parse(unsigned int length, unsigned char* data)
-{
-    if (length < 6 || data[1] != 0x43)  /* too short, or not Yamaha */
-        return 0;
-
-    if ((data[2] & 0x0f) != edit_receive_channel)  /* wrong MIDI channel */
-        return 0;
-
-    if ((data[2] & 0xf0) == 0x00 && data[3] == 0x00 &&  /* DX7 single voice dump */
-        data[4] == 0x01 && data[5] == 0x1b) {
-
-        if (length != DX7_DUMP_SIZE_VOICE_SINGLE ||
-            data[DX7_DUMP_SIZE_VOICE_SINGLE - 1] != 0xf7) {
-            GUIDB_MESSAGE(DB_IO, " gui_data_sysex_parse: badly formatted DX7 single voice dump!\n");
-            return 0;
-        }
-
-        if (dx7_bulk_dump_checksum(&data[6], DX7_VOICE_SIZE_UNPACKED) !=
-            data[DX7_DUMP_SIZE_VOICE_SINGLE - 2]) {
-            GUIDB_MESSAGE(DB_IO, " gui_data_sysex_parse: DX7 single voice dump with bad checksum!\n");
-            return 0;
-        }
-
-        GUIDB_MESSAGE(DB_IO, " gui_data_sysex_parse: DX7 single voice dump received\n");
-
-        gui_data_set_up_edit_buffer(0);
-        memcpy(&edit_buffer.buffer, data + 6, DX7_VOICE_SIZE_UNPACKED);
-
-        return 1;
-
-    } else if ((data[2] & 0xf0) == 0x10 &&    /* DX7 voice parameter change (g = 0)*/
-               (data[3] & 0xfc) == 0x00) {
-
-        int i;
-
-        if (length != 7 || data[6] != 0xf7) {
-            GUIDB_MESSAGE(DB_IO, " gui_data_sysex_parse: badly formatted DX7 voice parameter change!\n");
-            return 0;
-        }
-
-        i = ((data[3] & 0x03) << 7) + (data[4] & 0x7f);
-
-        if (i >= DX7_VOICE_SIZE_UNPACKED) {
-            GUIDB_MESSAGE(DB_IO, " gui_data_sysex_parse: out-of-range DX7 voice parameter change!\n");
-            return 0;
-        }
-
-        GUIDB_MESSAGE(DB_IO, " gui_data_sysex_parse: DX7 voice parameter change #%d => %d\n", i, data[5] & 0x7f);
-
-        gui_data_set_up_edit_buffer(1);
-        edit_buffer.buffer[i] = data[5] & 0x7f;
-
-        return 1;
-    }
-
-    /* nope, don't know what this is */
-    return 0;
-}
-
 void
 gui_data_send_edit_buffer(void)
 {
@@ -557,7 +483,7 @@ gui_data_send_edit_buffer(void)
 }
 
 void
-gui_data_clear_edit_buffer(void)
+gui_data_send_edit_buffer_off(void)
 {
     lo_send(osc_host_address, osc_configure_path, "ss", "edit_buffer", "off");
 }

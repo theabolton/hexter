@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004, 2009, 2011 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2011, 2012 Sean Bolton and others.
  *
  * Portions of this file may have come from Chris Cannam and Steve
  * Harris's public domain DSSI example code.
@@ -41,6 +41,7 @@
 #include "gui_callbacks.h"
 #include "gui_interface.h"
 #include "gui_midi.h"
+#include "gui_patch_edit.h"
 #include "gui_data.h"
 #include "dx7_voice_data.h"
 
@@ -68,9 +69,12 @@ char *        project_directory = NULL;
 
 int           current_program = 0;
 
+/* edit_buffer_active should be TRUE when the plugin has an edit_buffer
+ * overlay, and FALSE when it doesn't. Simple. Then in that corner case where
+ * edit_buffer.program != current_program and edit_buffer_active == TRUE,
+ * the GUI patch editor should be insensitive. */
 int           edit_buffer_active = 0;
 edit_buffer_t edit_buffer;
-int           edit_receive_channel = 0;
 
 int host_requested_quit = 0;
 int gui_test_mode = 0;
@@ -359,6 +363,7 @@ main(int argc, char *argv[])
     GUIDB_MESSAGE(DB_OSC, ": listening at %s\n", osc_self_url);
 
     /* set up GTK+ */
+    patch_edit_create_edit_adjs();
     create_windows(user_friendly_id);
 
     /* add OSC server socket to GTK+'s watched I/O */
@@ -375,6 +380,10 @@ main(int argc, char *argv[])
     gui_data_patches_init();
     rebuild_patches_clist();
     update_performance_widgets(dx7_init_performance);
+    edit_buffer.program = 0;
+    dx7_patch_unpack(patches, edit_buffer.program, edit_buffer.voice);
+    patch_edit_connect_to_model();
+    patch_edit_update_editors();
 
     /* schedule our update request */
     update_request_timeout_tag = gtk_timeout_add(50,
@@ -386,6 +395,9 @@ main(int argc, char *argv[])
 
     /* clean up and exit */
     GUIDB_MESSAGE(DB_MAIN, ": yep, we got to the cleanup!\n");
+
+    /* release test note, if playing */
+    release_test_note();
 
     /* shut down sys-ex receive, if enabled */
     if (sysex_enabled) {

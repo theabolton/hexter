@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004, 2009, 2011 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2011, 2012 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -34,10 +34,8 @@ void  gui_data_send_dirty_patch_sections(void);
 int   gui_data_save(char *filename, int type, int start, int end,
                     char **message);
 int   gui_data_load(const char *filename, int position, char **message);
-void  gui_data_set_up_edit_buffer(int copy_current_program);
-int   gui_data_sysex_parse(unsigned int length, unsigned char *data);
 void  gui_data_send_edit_buffer(void);
-void  gui_data_clear_edit_buffer(void);
+void  gui_data_send_edit_buffer_off(void);
 void  gui_data_send_performance_buffer(uint8_t *performance_buffer);
 
 #endif /* _GUI_DATA_H */

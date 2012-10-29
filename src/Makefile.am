@@ -30,7 +30,14 @@ hexter_gtk_SOURCES = \
 	gui_interface.h \
 	gui_main.h \
 	gui_midi.c \
-	gui_midi.h
+	gui_midi.h \
+	gui_patch_edit.c \
+	gui_patch_edit.h \
+	gui_retro_console.c \
+	gui_retro_console.h \
+	gui_retro_editor.c \
+	gui_widgy_alg.c \
+	gui_widgy_editor.c
 
 hexter_gtk_CFLAGS = @GTK_CFLAGS@ $(AM_CFLAGS) @ALSA_CFLAGS@
 

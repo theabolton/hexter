@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004, 2009 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2012 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -32,19 +32,23 @@
 #include "gui_callbacks.h"
 #include "gui_interface.h"
 #include "gui_images.h"
+#include "gui_patch_edit.h"
 
 GtkWidget *main_window;
+GtkObject *test_note_key_adj;
+GtkObject *test_note_velocity_adj;
 GtkObject *tuning_adj;
 GtkObject *volume_adj;
 GtkObject *polyphony_instance_adj;
 GtkObject *polyphony_global_adj;
 GtkWidget *monophonic_option_menu;
 GtkWidget *compat059_button;
+#ifdef HEXTER_DEBUG_CONTROL
+GtkObject *test_adj;
+#endif
 GtkWidget *sysex_channel_label;
 GtkWidget *sysex_channel_spin;
 GtkWidget *sysex_status_label;
-GtkWidget *sysex_discard_button;
-GtkWidget *sysex_save_button;
 GtkWidget *performance_frame;
 GtkObject *performance_spin_adjustments[6];
 GtkWidget *performance_assign_widgets[4][3];
@@ -237,6 +241,9 @@ create_main_window (const char *tag)
     GtkWidget *menu_export;
     GtkWidget *separator1;
     GtkWidget *menu_quit;
+    GtkWidget *edit1;
+    GtkWidget *edit1_menu;
+    GtkWidget *menu_edit;
     GtkWidget *help1;
     GtkWidget *help1_menu;
     GtkWidget *menu_about;
@@ -272,7 +279,6 @@ create_main_window (const char *tag)
 #ifdef MIDI_ALSA
     GtkWidget *sysex_enable_button;
     GtkObject *sysex_channel_spin_adj;
-    GtkWidget *sysex_action_label;
     GtkWidget *frame15;
     GtkWidget *frame4;
     GtkWidget *table3;
@@ -352,6 +358,21 @@ create_main_window (const char *tag)
     gtk_container_add (GTK_CONTAINER (file1_menu), menu_quit);
     gtk_widget_add_accelerator (menu_quit, "activate", accel_group,
                                 GDK_Q, GDK_CONTROL_MASK,
+                                GTK_ACCEL_VISIBLE);
+
+    edit1 = gtk_menu_item_new_with_label ("Edit");
+    gtk_widget_show (edit1);
+    gtk_container_add (GTK_CONTAINER (menubar1), edit1);
+    gtk_menu_item_right_justify (GTK_MENU_ITEM (edit1));
+
+    edit1_menu = gtk_menu_new ();
+    gtk_menu_item_set_submenu (GTK_MENU_ITEM (edit1), edit1_menu);
+
+    menu_edit = gtk_menu_item_new_with_label ("Edit Patch...");
+    gtk_widget_show (menu_edit);
+    gtk_container_add (GTK_CONTAINER (edit1_menu), menu_edit);
+    gtk_widget_add_accelerator (menu_edit, "activate", accel_group,
+                                GDK_E, GDK_CONTROL_MASK,
                                 GTK_ACCEL_VISIBLE);
 
     help1 = gtk_menu_item_new_with_label ("About");
@@ -585,6 +606,21 @@ create_main_window (const char *tag)
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
 
+#ifdef HEXTER_DEBUG_CONTROL
+    {   GtkWidget *w;
+        test_adj = gtk_adjustment_new(0, 0, 16383, 1, 10, 0);
+        w = gtk_hscale_new(GTK_ADJUSTMENT(test_adj));
+        gtk_scale_set_value_pos (GTK_SCALE (w), GTK_POS_RIGHT);
+        gtk_scale_set_digits (GTK_SCALE (w), 0);
+        gtk_range_set_update_policy (GTK_RANGE (w), GTK_UPDATE_DELAYED);
+        gtk_widget_show(w);
+        gtk_table_attach (GTK_TABLE(table16), w, 0, 2, 6, 7,
+                          (GtkAttachOptions) (GTK_FILL),
+                          (GtkAttachOptions) (0), 0, 0);
+        g_signal_connect(G_OBJECT(test_adj), "value-changed", G_CALLBACK(on_test_changed), NULL);
+    }
+#endif /* HEXTER_DEBUG_CONTROL */
+
 #ifdef MIDI_ALSA
     frame15 = gtk_frame_new ("Sys-Ex Patch Editing");
     gtk_widget_ref (frame15);
@@ -593,7 +629,7 @@ create_main_window (const char *tag)
     gtk_widget_show (frame15);
     gtk_box_pack_start (GTK_BOX (vbox2), frame15, TRUE, TRUE, 0);
 
-    table3 = gtk_table_new (5, 3, FALSE);
+    table3 = gtk_table_new (3, 2, FALSE);
     gtk_widget_ref (table3);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "table3", table3,
                               (GtkDestroyNotify) gtk_widget_unref);
@@ -608,7 +644,7 @@ create_main_window (const char *tag)
     gtk_object_set_data_full (GTK_OBJECT (main_window), "label11", label11,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_widget_show (label11);
-    gtk_table_attach (GTK_TABLE (table3), label11, 0, 2, 0, 1,
+    gtk_table_attach (GTK_TABLE (table3), label11, 0, 1, 0, 1,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
     gtk_misc_set_alignment (GTK_MISC (label11), 0, 0.5);
@@ -618,7 +654,7 @@ create_main_window (const char *tag)
     gtk_object_set_data_full (GTK_OBJECT (main_window), "sysex_enable_button", sysex_enable_button,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_widget_show (sysex_enable_button);
-    gtk_table_attach (GTK_TABLE (table3), sysex_enable_button, 2, 3, 0, 1,
+    gtk_table_attach (GTK_TABLE (table3), sysex_enable_button, 1, 2, 0, 1,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
 
@@ -627,7 +663,7 @@ create_main_window (const char *tag)
     gtk_object_set_data_full (GTK_OBJECT (main_window), "sysex_channel_label", sysex_channel_label,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_widget_show (sysex_channel_label);
-    gtk_table_attach (GTK_TABLE (table3), sysex_channel_label, 0, 2, 1, 2,
+    gtk_table_attach (GTK_TABLE (table3), sysex_channel_label, 0, 1, 1, 2,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
     gtk_misc_set_alignment (GTK_MISC (sysex_channel_label), 0, 0.5);
@@ -639,8 +675,8 @@ create_main_window (const char *tag)
     gtk_object_set_data_full (GTK_OBJECT (main_window), "sysex_channel_spin", sysex_channel_spin,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_widget_show (sysex_channel_spin);
-    gtk_table_attach (GTK_TABLE (table3), sysex_channel_spin, 2, 3, 1, 2,
-                      (GtkAttachOptions) (GTK_FILL),
+    gtk_table_attach (GTK_TABLE (table3), sysex_channel_spin, 1, 2, 1, 2,
+                      (GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
     gtk_widget_set_sensitive (sysex_channel_spin, FALSE);
 
@@ -649,8 +685,8 @@ create_main_window (const char *tag)
     gtk_object_set_data_full (GTK_OBJECT (main_window), "frame4", frame4,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_widget_show (frame4);
-    gtk_table_attach (GTK_TABLE (table3), frame4, 0, 3, 2, 3,
-                      (GtkAttachOptions) (GTK_FILL),
+    gtk_table_attach (GTK_TABLE (table3), frame4, 0, 2, 2, 3,
+                      (GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
                       (GtkAttachOptions) (GTK_EXPAND | GTK_FILL), 0, 0);
     gtk_frame_set_shadow_type (GTK_FRAME (frame4), GTK_SHADOW_IN);
 
@@ -662,36 +698,6 @@ create_main_window (const char *tag)
     gtk_container_add (GTK_CONTAINER (frame4), sysex_status_label);
     gtk_label_set_line_wrap (GTK_LABEL (sysex_status_label), TRUE);
     gtk_misc_set_alignment (GTK_MISC (sysex_status_label), 0, 0.5);
-
-    sysex_action_label = gtk_label_new ("Edit Action");
-    gtk_widget_ref (sysex_action_label);
-    gtk_object_set_data_full (GTK_OBJECT (main_window), "sysex_action_label", sysex_action_label,
-                              (GtkDestroyNotify) gtk_widget_unref);
-    gtk_widget_show (sysex_action_label);
-    gtk_table_attach (GTK_TABLE (table3), sysex_action_label, 0, 1, 3, 4,
-                      (GtkAttachOptions) (GTK_FILL),
-                      (GtkAttachOptions) (0), 0, 0);
-    gtk_misc_set_alignment (GTK_MISC (sysex_action_label), 0, 0.5);
-
-    sysex_discard_button = gtk_button_new_with_label ("Discard Changes");
-    gtk_widget_ref (sysex_discard_button);
-    gtk_object_set_data_full (GTK_OBJECT (main_window), "sysex_discard_button", sysex_discard_button,
-                              (GtkDestroyNotify) gtk_widget_unref);
-    gtk_widget_show (sysex_discard_button);
-    gtk_table_attach (GTK_TABLE (table3), sysex_discard_button, 1, 3, 3, 4,
-                      (GtkAttachOptions) (GTK_FILL),
-                      (GtkAttachOptions) (0), 0, 0);
-    gtk_widget_set_sensitive (sysex_discard_button, FALSE);
-
-    sysex_save_button = gtk_button_new_with_label ("Save Changes into Patch Bank");
-    gtk_widget_ref (sysex_save_button);
-    gtk_object_set_data_full (GTK_OBJECT (main_window), "sysex_save_button", sysex_save_button,
-                              (GtkDestroyNotify) gtk_widget_unref);
-    gtk_widget_show (sysex_save_button);
-    gtk_table_attach (GTK_TABLE (table3), sysex_save_button, 1, 3, 4, 5,
-                      (GtkAttachOptions) (GTK_FILL),
-                      (GtkAttachOptions) (0), 0, 0);
-    gtk_widget_set_sensitive (sysex_save_button, FALSE);
 #endif /* MIDI_ALSA */
 
     configuration_tab_label = gtk_label_new ("Configuration");
@@ -789,7 +795,8 @@ create_main_window (const char *tag)
                       (GtkAttachOptions) (0), 4, 0);
     gtk_container_set_border_width (GTK_CONTAINER (test_note_button), 2);
 
-    test_note_key = gtk_hscale_new (GTK_ADJUSTMENT (gtk_adjustment_new (60, 12, 132, 1, 12, 12)));
+    test_note_key_adj = gtk_adjustment_new (60, 12, 132, 1, 12, 12);
+    test_note_key = gtk_hscale_new (GTK_ADJUSTMENT (test_note_key_adj));
     gtk_widget_ref (test_note_key);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "test_note_key", test_note_key,
                               (GtkDestroyNotify) gtk_widget_unref);
@@ -801,7 +808,8 @@ create_main_window (const char *tag)
     gtk_scale_set_digits (GTK_SCALE (test_note_key), 0);
     gtk_range_set_update_policy (GTK_RANGE (test_note_key), GTK_UPDATE_DELAYED);
 
-    test_note_velocity = gtk_hscale_new (GTK_ADJUSTMENT (gtk_adjustment_new (84, 1, 137, 1, 10, 10)));
+    test_note_velocity_adj = gtk_adjustment_new (84, 1, 137, 1, 10, 10);
+    test_note_velocity = gtk_hscale_new (GTK_ADJUSTMENT (test_note_velocity_adj));
     gtk_widget_ref (test_note_velocity);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "test_note_velocity", test_note_velocity,
                               (GtkDestroyNotify) gtk_widget_unref);
@@ -829,6 +837,9 @@ create_main_window (const char *tag)
                         NULL);
     gtk_signal_connect (GTK_OBJECT (menu_quit), "activate",
                         GTK_SIGNAL_FUNC (on_menu_quit_activate),
+                        NULL);
+    gtk_signal_connect (GTK_OBJECT (menu_edit), "activate",
+                        GTK_SIGNAL_FUNC (on_menu_edit_activate),
                         NULL);
     gtk_signal_connect (GTK_OBJECT (menu_about), "activate",
                         GTK_SIGNAL_FUNC (on_menu_about_activate),
@@ -875,19 +886,13 @@ create_main_window (const char *tag)
     gtk_signal_connect (GTK_OBJECT (sysex_channel_spin_adj), "value_changed",
                         GTK_SIGNAL_FUNC (on_sysex_channel_change),
                         NULL);
-    gtk_signal_connect (GTK_OBJECT (sysex_discard_button), "clicked",
-                        GTK_SIGNAL_FUNC (on_sysex_discard_button_press),
-                        NULL);
-    gtk_signal_connect (GTK_OBJECT (sysex_save_button), "clicked",
-                        GTK_SIGNAL_FUNC (on_sysex_save_button_press),
-                        NULL);
 #endif /* MIDI_ALSA */
 
     /* connect test note widgets */
-    gtk_signal_connect (GTK_OBJECT (gtk_range_get_adjustment (GTK_RANGE (test_note_key))),
+    gtk_signal_connect (GTK_OBJECT (test_note_key_adj),
                         "value_changed", GTK_SIGNAL_FUNC(on_test_note_slider_change),
                         (gpointer)0);
-    gtk_signal_connect (GTK_OBJECT (gtk_range_get_adjustment (GTK_RANGE (test_note_velocity))),
+    gtk_signal_connect (GTK_OBJECT (test_note_velocity_adj),
                         "value_changed", GTK_SIGNAL_FUNC(on_test_note_slider_change),
                         (gpointer)1);
     gtk_signal_connect (GTK_OBJECT (test_note_button), "pressed",
@@ -1589,6 +1594,7 @@ create_windows(const char *instance_tag)
     }
 
     create_main_window(tag);
+    create_editor_window(tag);
     create_about_window(tag);
     create_import_file_selection(tag);
     create_import_file_position_window(tag);

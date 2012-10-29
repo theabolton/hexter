@@ -1,3 +1,15 @@
+20121029 smbolton
+
+* Merged patched editors.
+
+* Merged DX-7 to UTF-8 character set conversion.
+
+* Fixed test note code to prevent stuck notes.
+
+20121023 smbolton
+
+* Merged debug branch.
+
 20121022 smbolton
 
 * hexter development is now hosted on github:

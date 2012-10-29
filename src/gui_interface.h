@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004, 2009 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2012 Sean Bolton and others.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -24,6 +24,8 @@
 #include <gtk/gtk.h>
 
 extern GtkWidget *main_window;
+extern GtkObject *test_note_key_adj;
+extern GtkObject *test_note_velocity_adj;
 extern GtkObject *tuning_adj;
 extern GtkObject *volume_adj;
 extern GtkObject *polyphony_instance_adj;
@@ -33,8 +35,6 @@ extern GtkWidget *compat059_button;
 extern GtkWidget *sysex_channel_label;
 extern GtkWidget *sysex_channel_spin;
 extern GtkWidget *sysex_status_label;
-extern GtkWidget *sysex_discard_button;
-extern GtkWidget *sysex_save_button;
 
 extern GtkWidget *about_window;
 extern GtkWidget *about_label;
@@ -82,6 +82,7 @@ extern GtkWidget *performance_assign_widgets[4][3];
 extern const char *performance_spin_names[6];
 extern const char *performance_assign_names[4];
 
+void set_window_title(GtkWidget *window, const char *tag, const char *text);
 void create_windows(const char *instance_tag);
 
 #endif /* _GUI_INTERFACE_H */
