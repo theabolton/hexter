@@ -265,9 +265,11 @@ patch_edit_on_edit_adj_changed(GtkAdjustment *adj, gpointer data)
     float value = adj->value;
     int offset = (int)data;
 
-    printf("patch_edit_on_edit_adj_changed: offset %d, value %f\n", offset, value); // !FIX! these should be GUIDBFOOBUGWHACK()
-    // GUIDB_MESSAGE(DB_GUI, ": XXXXXXXon_editor_save_button_press called\n");
+    /* GUIDB_MESSAGE(DB_GUI, ": patch_edit_on_edit_adj_changed: offset %d, value %f\n", offset, value); */
     edit_buffer.voice[offset] = value;
+    edit_buffer_active = TRUE;
+    gui_data_send_edit_buffer();
+    patch_edit_update_status();
 }
 
 void
