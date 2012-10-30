@@ -47,7 +47,7 @@
 /*   a search option would be nice          */
 /*   show channel/instrument on display     */
 
-#define VERSIONSTRING "0.93s"
+#define VERSIONSTRING "0.94s"
 
 /* Undefine USE_ALSA_MIDI to just write to /dev/midi */
 #define USE_ALSA_MIDI 1
