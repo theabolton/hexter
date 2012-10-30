@@ -1203,9 +1203,11 @@ Load(char *filename)
     if (count == 0)
         count = filelength / DX7_VOICE_SIZE_PACKED;
 
-    /* Dr.T TX7 file needs special treatment */
+    /* Dr.T and Steinberg TX7 file needs special treatment */
     if ((!strcmp(filename + filename_length - 4, ".TX7") ||
-         !strcmp(filename + filename_length - 4, ".tx7")) && filelength == 8192) {
+         !strcmp(filename + filename_length -4, ".SND") ||
+         !strcmp(filename + filename_length -4, ".tx7") ||
+         !strcmp(filename + filename_length - 4, ".snd")) && filelength == 8192) {
 
         count = 32;
         filelength = 4096;
