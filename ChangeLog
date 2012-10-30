@@ -1,4 +1,4 @@
-20121029 smbolton
+20121029 smbolton -- version 1.0.0
 
 * Merged patched editors.
 
@@ -17,7 +17,7 @@
 
 * More patch loading enhancements from Martin Tarenskeen.
 
-20110628 CVS commit smbolton (0.6.9.0)
+20110628 CVS commit smbolton -- version 0.6.9.0
 
 * MIDI non-registered parameters (NRPNs) can now be used to change
     any of the operator parameters for a plugin instance's current
