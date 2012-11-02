@@ -41,7 +41,7 @@ hexter_gtk_SOURCES = \
 
 hexter_gtk_CFLAGS = @GTK_CFLAGS@ $(AM_CFLAGS) @ALSA_CFLAGS@
 
-hexter_gtk_LDADD = @GTK_LIBS@ @ALSA_LIBS@
+hexter_gtk_LDADD = @GTK_LIBS@ @ALSA_LIBS@ -lm
 
 hexter_text_SOURCES = \
 	../extra/textui_main.c \
