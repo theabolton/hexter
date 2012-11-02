@@ -1,3 +1,7 @@
+20121102 smbolton -- version 1.0.1
+
+* Didn't I already fix that missing '-lm' thing everywhere already?
+
 20121029 smbolton -- version 1.0.0
 
 * Merged patched editors.
