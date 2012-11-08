@@ -815,7 +815,8 @@ update_from_program_select(unsigned long bank, unsigned long program)
             dx7_patch_unpack(patches, edit_buffer.program, edit_buffer.voice);
             /* set all the patch edit widgets to match */
             patch_edit_update_editors(); /* also updates status */
-        }
+        } else
+            patch_edit_update_status();
 
     } else {  /* out of range */
 
@@ -1016,8 +1017,7 @@ patches_clist_set_program(void)
     gtk_clist_select_row (GTK_CLIST(patches_clist), current_program, 0);
     internal_gui_update_only = 0;
     /* scroll window to show active row */
-    double d = (current_program == 0) ? 0.0 : 0.5; /* clist buggy? no! (gtk_clist_row_is_visible doesn't work right, either) */
-    gtk_clist_moveto(GTK_CLIST(patches_clist), current_program, 0, d, 0);
+    gtk_clist_moveto(GTK_CLIST(patches_clist), current_program, 0, 0, 0);
 }
 
 void

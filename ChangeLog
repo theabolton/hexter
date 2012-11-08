@@ -1,3 +1,9 @@
+20121108 smbolton -- version 1.0.2
+
+* Fixed: starting the GUI on a session with unsaved edits would
+    leave the patch editor insensitive (thanks to William Light for
+    the bug report.)
+
 20121102 smbolton -- version 1.0.1
 
 * Didn't I already fix that missing '-lm' thing everywhere already?

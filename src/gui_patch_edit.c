@@ -312,6 +312,8 @@ patch_edit_update_status(void)
     } else {
         if (current_program != edit_buffer.program) {
             /* this should happen only transiently at startup, or as the result of a buggy host */
+            /* GUIDB_MESSAGE(DB_GUI, ": edit buffer sync error, current_program %d, edit_buffer.program %d\n",
+             *                current_program, edit_buffer.program); */
             gtk_label_set_text (GTK_LABEL (editor_status_label), "(edit buffer sync error, select program to clear)");
             editable = FALSE;
         } else {
