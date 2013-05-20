@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2011, 2012 Sean Bolton.
+ * Copyright (C) 2011, 2012, 2013 Sean Bolton.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -373,8 +373,8 @@ patch_edit_NoteText(int note)
 
     _NoteText[0]=(" C D  F G A ")[note%12];
     _NoteText[1]=("C#D#EF#G#A#B")[note%12];
-    _NoteText[2]=("-0123456789")[note/12];
-    _NoteText[3]=("1          ")[note/12];
+    _NoteText[2]=("--012345678")[note/12];
+    _NoteText[3]=("21         ")[note/12];
 
     return _NoteText;
 }

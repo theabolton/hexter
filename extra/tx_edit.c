@@ -1,7 +1,7 @@
 /* Yamaha DX7 / TX7 Editor/Librarian
  *
  * Copyright (C) 1991, 1995, 1997, 1998, 2004, 2009, 2011,
- * 2012 Sean Bolton.
+ * 2012, 2013 Sean Bolton.
  *
  * This is an ncurses-based patch editor for the Yamaha DX7 and
  * TX7.  It is provided as-is, without any documentation, and
@@ -588,8 +588,8 @@ NoteText(int note)
 {
     _NoteText[0]=(" C D  F G A ")[note%12];
     _NoteText[1]=("C#D#EF#G#A#B")[note%12];
-    _NoteText[2]=("-0123456789")[note/12];
-    _NoteText[3]=("1          ")[note/12];
+    _NoteText[2]=("--012345678")[note/12];
+    _NoteText[3]=("21         ")[note/12];
     return _NoteText;
 }
 

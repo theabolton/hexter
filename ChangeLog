@@ -1,3 +1,10 @@
+20130520 smbolton
+
+* At the request of Martin Tarenskeen, changed the representation of
+    breakpoint pitch (and transpose in the retro and stand-alone
+    editors) to match Yamaha's usage (MIDI note 60 = "C3") rather
+    than the previous non-standard standard (60 = "C4").
+
 20121108 smbolton -- version 1.0.2
 
 * Fixed: starting the GUI on a session with unsaved edits would
