@@ -747,7 +747,7 @@ re_SetScreen(void)
             "  P\n");
     cprintf("                                          Alg.\n"
             "      Left   BkPt  Right     Speed        Fdbk\n");
-    cprintf("  1                          Delay        C4=\n");
+    cprintf("  1                          Delay        C3=\n");
     cprintf("  2                          PMD          OKS\n");
     cprintf("  3                          AMD\n");
     cprintf("  4                          Sync\n");
