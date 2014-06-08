@@ -242,7 +242,6 @@ hexter_cleanup(LADSPA_Handle handle)
         hexter_deactivate(instance);
 
         if (instance->patches) free(instance->patches);
-        free(instance);
 
         prev = NULL;
         for (inst = hexter_synth.instances; inst; inst = inst->next) {
@@ -256,6 +255,7 @@ hexter_cleanup(LADSPA_Handle handle)
             prev = inst;
         }
         hexter_synth.instance_count--;
+        free(instance);
     }
 
     if (!hexter_synth.instance_count && hexter_synth.initialized) {
