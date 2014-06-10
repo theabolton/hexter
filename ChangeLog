@@ -1,3 +1,8 @@
+20140610 smbolton -- version 1.0.3
+
+* Merged patch by Rui Nuno Capela, which fixed a use-after-free bug
+    in hexter_cleanup() that could crash Qtractor.
+
 20130520 smbolton
 
 * At the request of Martin Tarenskeen, changed the representation of
