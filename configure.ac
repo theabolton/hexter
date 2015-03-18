@@ -105,12 +105,24 @@ if test "x$GCC" = "xyes"; then
       # add '-finline-limit=...' only for GCC 3.x and 4.x:
       case `$CC -dumpversion 2>/dev/null` in
       # these --params are also in 3.4.6, but not in 3.3.6
-      4.*) CFLAGS="$CFLAGS -finline-limit=5000 --param large-function-growth=4900 --param inline-unit-growth=900" ;;
-      3.*) CFLAGS="$CFLAGS -finline-limit=5000" ;;
+      4.*) INLINE_CFLAGS="-finline-limit=5000 --param large-function-growth=4900 --param inline-unit-growth=900" ;;
+      3.*) INLINE_CFLAGS="-finline-limit=5000" ;;
       esac ;;
   esac
 fi
 changequote([,])dnl
+
+dnl Add -finiline-limit only if compiler supports it
+save_cflags="$CFLAGS"
+CFLAGS=$INLINE_CFLAGS
+AC_MSG_CHECKING([whether CC supports -finline-limit])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+    [AC_MSG_RESULT([yes])]
+    [AM_CFLAGS=$INLINE_CFLAGS],
+    [AC_MSG_RESULT([no])]
+)
+CFLAGS="$save_cflags"
+AC_SUBST([AM_CFLAGS])
 
 AC_OUTPUT([
 Makefile
