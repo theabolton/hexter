@@ -52,7 +52,7 @@ struct _hexter_instance_t
     LADSPA_Data    *tuning;
     LADSPA_Data    *volume;
 
-    float           sample_rate;  
+    float           sample_rate;
     float           nugget_rate;       /* nuggets per second */
     int32_t         ramp_duration;     /* frames per ramp for mods and volume */
     dx7_sample_t    dx7_eg_max_slew;   /* max op eg increment, in units per frame */
@@ -187,7 +187,7 @@ char *hexter_synth_handle_global_polyphony(const char *value);
 char *hexter_instance_handle_performance(hexter_instance_t *instance,
                                          const char *value);
 void  hexter_synth_render_voices(unsigned long samples_done,
-                                 unsigned long sample_count, 
+                                 unsigned long sample_count,
                                  int do_control_update);
 
 /* these come right out of alsa/asoundef.h */
@@ -223,4 +223,3 @@ void  hexter_synth_render_voices(unsigned long samples_done,
 #define HEXTER_INSTANCE_SUSTAINED(_s)  ((_s)->cc[MIDI_CTL_SUSTAIN] >= 64)
 
 #endif /* _HEXTER_SYNTH_H */
-

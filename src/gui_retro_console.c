@@ -73,7 +73,7 @@ rc_button_press (GtkWidget      *widget,
     /* GUIDB_MESSAGE(DB_GUI, " rc_button_press: button %d @ %g, %g\n", event->button, event->x, event->y); */
 
     if (!GTK_WIDGET_HAS_FOCUS (widget))
-	gtk_widget_grab_focus (widget);
+        gtk_widget_grab_focus (widget);
 
     if (rc_button_press_callback)
         (*rc_button_press_callback)(event->button, ((int)event->x) / RC_FONT_WIDTH,
@@ -89,7 +89,7 @@ rc_console_set_key_press_callback(void (*cb)(gboolean, guint, guint))
 }
 
 static guint keyvals_to_pass[] = {
-    GDK_BackSpace, GDK_Delete, GDK_Escape, GDK_Return, 
+    GDK_BackSpace, GDK_Delete, GDK_Escape, GDK_Return,
     GDK_Tab, GDK_ISO_Left_Tab,
     GDK_Page_Up, GDK_Page_Down, GDK_Home, GDK_End,
     GDK_Left, GDK_Right, GDK_Up, GDK_Down,
@@ -145,7 +145,7 @@ rc_console_addch(char c)
 
         rch->c = c;
         rch->pair = rc_color_pair;
-        
+
         gtk_widget_queue_draw_area(rc_drawing_area, rc_cursor_x * RC_FONT_WIDTH, rc_cursor_y * RC_FONT_HEIGHT,
                                    RC_FONT_WIDTH, RC_FONT_HEIGHT);
     }
@@ -755,4 +755,3 @@ static unsigned char font_png[4565] =
   "B`\202";
 
 #endif /* RC_USE_BIG_FONT */
-

@@ -388,7 +388,7 @@ dx7_op_eg_set_next_phase(hexter_instance_t *instance, dx7_op_eg_t *eg)
       case 0:
       case 1:
         eg->phase++;
-	dx7_op_eg_set_increment(instance, eg, eg->rate[eg->phase], eg->level[eg->phase]);
+        dx7_op_eg_set_increment(instance, eg, eg->rate[eg->phase], eg->level[eg->phase]);
 #ifndef HEXTER_USE_FLOATING_POINT
         if (eg->duration == 1 && eg->increment == 0)
             dx7_op_eg_set_next_phase(instance, eg);
@@ -674,7 +674,7 @@ dx7_pitch_eg_set_next_phase(hexter_instance_t *instance, dx7_pitch_eg_t *eg)
       case 0:
       case 1:
         eg->phase++;
-	dx7_pitch_eg_set_increment(instance, eg, eg->rate[eg->phase],
+        dx7_pitch_eg_set_increment(instance, eg, eg->rate[eg->phase],
                                    eg->level[eg->phase]);
         break;
 
@@ -784,7 +784,7 @@ dx7_op_recalculate_increment(hexter_instance_t *instance, dx7_op_t *op)
         /* -FIX- figure out what to do with detune */
 
     } else {
-    
+
         freq = op->frequency;
         freq += ((double)op->detune - 7.0) / 32.0; /* -FIX- is this correct? */
         if (op->coarse) {
@@ -1357,14 +1357,14 @@ dx7_voice_set_data(hexter_instance_t *instance, dx7_voice_t *voice)
     double aux_feedbk;
 
     for (i = 0; i < MAX_DX7_OPERATORS; i++) {
-	uint8_t *eb_op = edit_buffer + ((5 - i) * 21);
+        uint8_t *eb_op = edit_buffer + ((5 - i) * 21);
 
         voice->op[i].output_level  = limit(eb_op[16], 0, 99);
 
-	voice->op[i].osc_mode      = eb_op[17] & 0x01;
+        voice->op[i].osc_mode      = eb_op[17] & 0x01;
         voice->op[i].coarse        = eb_op[18] & 0x1f;
         voice->op[i].fine          = limit(eb_op[19], 0, 99);
-	voice->op[i].detune        = limit(eb_op[20], 0, 14);
+        voice->op[i].detune        = limit(eb_op[20], 0, 14);
 
         voice->op[i].level_scaling_bkpoint = limit(eb_op[ 8], 0, 99);
         voice->op[i].level_scaling_l_depth = limit(eb_op[ 9], 0, 99);
@@ -1406,4 +1406,3 @@ dx7_voice_set_data(hexter_instance_t *instance, dx7_voice_t *voice)
 
     voice->transpose = limit(edit_buffer[144], 0, 48);
 }
-

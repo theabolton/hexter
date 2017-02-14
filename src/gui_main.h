@@ -59,4 +59,3 @@ extern int           edit_buffer_active;
 extern edit_buffer_t edit_buffer;
 
 #endif /* _GUI_MAIN_H */
-

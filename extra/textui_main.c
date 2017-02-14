@@ -34,7 +34,7 @@
 #include <readline/readline.h>
 #include <lo/lo.h>
 #include <dssi.h>
- 
+
 #include "hexter_types.h"
 #include "hexter.h"
 #include "gui_main.h"
@@ -320,7 +320,7 @@ main(int argc, char *argv[])
         FD_ZERO(&fds);
         FD_SET(0, &fds);  /* stdin */
         FD_SET(lo_fd, &fds);
-        
+
         ret = select(lo_fd + 1, &fds, NULL, NULL, NULL);
 
         if (ret == -1) {
@@ -381,4 +381,3 @@ main(int argc, char *argv[])
 
     return 0;
 }
-

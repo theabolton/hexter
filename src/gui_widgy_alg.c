@@ -260,4 +260,3 @@ we_alg_draw(cairo_t *cr, int alg)
         }
     }
 }
-

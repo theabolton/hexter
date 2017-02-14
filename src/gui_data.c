@@ -111,10 +111,10 @@ dx7_patchbank_load(const char *filename, dx7_patch_t *firstpatch,
     filename_length = strlen (filename);
 
     /* check if the file is a standard MIDI file */
-    if (raw_patch_data[0] == 0x4d &&	/* "M" */
-        raw_patch_data[1] == 0x54 &&	/* "T" */
-        raw_patch_data[2] == 0x68 &&	/* "h" */
-        raw_patch_data[3] == 0x64)	/* "d" */
+    if (raw_patch_data[0] == 0x4d &&    /* "M" */
+        raw_patch_data[1] == 0x54 &&    /* "T" */
+        raw_patch_data[2] == 0x68 &&    /* "h" */
+        raw_patch_data[3] == 0x64)      /* "d" */
         midshift = 2;
     else
         midshift = 0;
@@ -123,7 +123,7 @@ dx7_patchbank_load(const char *filename, dx7_patch_t *firstpatch,
     count = 0;
     datastart = 0;
     for (patchstart = 0; patchstart + midshift + 5 < filelength; patchstart++) {
-        
+
         if (raw_patch_data[patchstart] == 0xf0 &&
             raw_patch_data[patchstart + 1 + midshift] == 0x43 &&
             raw_patch_data[patchstart + 2 + midshift] <= 0x0f &&
@@ -137,10 +137,10 @@ dx7_patchbank_load(const char *filename, dx7_patch_t *firstpatch,
             count += 32;
             patchstart += (DX7_DUMP_SIZE_VOICE_BULK - 1);
 
-        } else if (raw_patch_data[patchstart] == 0xf0 && 
-                   raw_patch_data[patchstart + midshift + 1] == 0x43 && 
-                   raw_patch_data[patchstart + midshift + 2] <= 0x0f && 
-                   raw_patch_data[patchstart + midshift + 4] == 0x01 && 
+        } else if (raw_patch_data[patchstart] == 0xf0 &&
+                   raw_patch_data[patchstart + midshift + 1] == 0x43 &&
+                   raw_patch_data[patchstart + midshift + 2] <= 0x0f &&
+                   raw_patch_data[patchstart + midshift + 4] == 0x01 &&
                    raw_patch_data[patchstart + midshift + 5] == 0x1b &&
                    patchstart + midshift + 162 < filelength &&
                    raw_patch_data[patchstart + midshift + 162] == 0xf7) {  /* DX7 single voice (edit buffer) dump */
@@ -156,7 +156,7 @@ dx7_patchbank_load(const char *filename, dx7_patch_t *firstpatch,
             patchstart += (DX7_DUMP_SIZE_VOICE_SINGLE - 1);
         }
     }
-            
+
     /* assume raw DX7/TX7 data if no SysEx header was found. */
     /* assume the user knows what he is doing ;-) */
 
@@ -500,4 +500,3 @@ gui_data_send_performance_buffer(uint8_t *performance_buffer)
         free(p);
     }
 }
-

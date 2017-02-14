@@ -294,7 +294,7 @@ create_main_window (const char *tag)
     main_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
     gtk_object_set_data (GTK_OBJECT (main_window), "main_window", main_window);
     gtk_window_set_title (GTK_WINDOW (main_window), tag);
- 
+
     vbox1 = gtk_vbox_new (FALSE, 0);
     gtk_widget_ref (vbox1);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "vbox1", vbox1,
@@ -762,7 +762,7 @@ create_main_window (const char *tag)
     gtk_container_set_border_width (GTK_CONTAINER (table15), 4);
     gtk_table_set_row_spacings (GTK_TABLE (table15), 5);
     gtk_table_set_col_spacings (GTK_TABLE (table15), 5);
- 
+
     label10 = gtk_label_new ("key");
     gtk_widget_ref (label10);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "label10", label10,
@@ -827,7 +827,7 @@ create_main_window (const char *tag)
     gtk_signal_connect (GTK_OBJECT (main_window), "delete_event",
                         (GtkSignalFunc)on_delete_event_wrapper,
                         (gpointer)on_menu_quit_activate);
-    
+
     /* connect menu items */
     gtk_signal_connect (GTK_OBJECT (menu_import), "activate",
                         GTK_SIGNAL_FUNC (on_menu_import_activate),
@@ -1469,7 +1469,7 @@ create_edit_save_position_window (const char *tag)
     GtkWidget *hbox3;
     GtkWidget *position_cancel;
     GtkWidget *position_ok;
- 
+
     edit_save_position_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
     gtk_object_set_data (GTK_OBJECT (edit_save_position_window),
                          "edit_save_position_window", edit_save_position_window);
@@ -1520,7 +1520,7 @@ create_edit_save_position_window (const char *tag)
     gtk_widget_show (position_spin);
     gtk_box_pack_start (GTK_BOX (hbox2), position_spin, FALSE, FALSE, 2);
     gtk_spin_button_set_numeric (GTK_SPIN_BUTTON (position_spin), TRUE);
- 
+
     edit_save_position_name_label = gtk_label_new ("default voice");
     gtk_widget_ref (edit_save_position_name_label);
     gtk_object_set_data_full (GTK_OBJECT (edit_save_position_window),
@@ -1530,7 +1530,7 @@ create_edit_save_position_window (const char *tag)
     gtk_widget_show (edit_save_position_name_label);
     gtk_box_pack_start (GTK_BOX (hbox2), edit_save_position_name_label, FALSE, FALSE, 2);
     gtk_label_set_justify (GTK_LABEL (edit_save_position_name_label), GTK_JUSTIFY_LEFT);
- 
+
     hbox3 = gtk_hbox_new (FALSE, 0);
     gtk_widget_ref (hbox3);
     gtk_object_set_data_full (GTK_OBJECT (edit_save_position_window), "hbox3", hbox3,
@@ -1538,7 +1538,7 @@ create_edit_save_position_window (const char *tag)
     gtk_widget_show (hbox3);
     gtk_box_pack_start (GTK_BOX (vbox4), hbox3, TRUE, TRUE, 0);
     gtk_container_set_border_width (GTK_CONTAINER (hbox3), 6);
- 
+
     position_cancel = gtk_button_new_with_label ("Cancel");
     gtk_widget_ref (position_cancel);
     gtk_object_set_data_full (GTK_OBJECT (edit_save_position_window),
@@ -1546,7 +1546,7 @@ create_edit_save_position_window (const char *tag)
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_widget_show (position_cancel);
     gtk_box_pack_start (GTK_BOX (hbox3), position_cancel, TRUE, FALSE, 12);
- 
+
     position_ok = gtk_button_new_with_label ("Save");
     gtk_widget_ref (position_ok);
     gtk_object_set_data_full (GTK_OBJECT (edit_save_position_window),
@@ -1554,7 +1554,7 @@ create_edit_save_position_window (const char *tag)
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_widget_show (position_ok);
     gtk_box_pack_end (GTK_BOX (hbox3), position_ok, TRUE, FALSE, 12);
- 
+
     gtk_signal_connect (GTK_OBJECT (edit_save_position_window), "destroy",
                         GTK_SIGNAL_FUNC(gtk_main_quit), NULL);
     gtk_signal_connect (GTK_OBJECT (edit_save_position_window), "delete_event",
@@ -1603,4 +1603,3 @@ create_windows(const char *instance_tag)
     create_edit_save_position_window(tag);
     create_notice_window(tag);
 }
-

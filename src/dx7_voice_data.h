@@ -38,10 +38,9 @@ int  decode_7in6(const char *string, int expected_length, uint8_t *data);
 void dx7_voice_copy_name(char *name, dx7_patch_t *patch);
 void dx7_patch_unpack(dx7_patch_t *packed_patch, uint8_t number,
                       uint8_t *unpacked_patch);
-void dx7_patch_pack(uint8_t *unpacked_patch, dx7_patch_t *packed_patch, 
+void dx7_patch_pack(uint8_t *unpacked_patch, dx7_patch_t *packed_patch,
                     uint8_t number);
 void hexter_data_patches_init(dx7_patch_t *patches);
 void hexter_data_performance_init(uint8_t *performance);
 
 #endif /* _DX7_VOICE_DATA_H */
-

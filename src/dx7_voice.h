@@ -142,7 +142,7 @@ struct _dx7_op_t   /* operator */
     dx7_sample_t  phase_increment;
 
     dx7_op_eg_t eg;
-		
+
     uint8_t     level_scaling_bkpoint;
     uint8_t     level_scaling_l_depth;
     uint8_t     level_scaling_r_depth;
@@ -313,4 +313,3 @@ void    dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
 void    dx7_voice_init_tables(void);
 
 #endif /* _DX7_VOICE_H */
-

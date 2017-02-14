@@ -97,7 +97,7 @@ run_plugin(int i, int count)
 {
     while (samples[i] < count) {
         int start_note = 0;
-    
+
         if (samples[i] >= delay[i]) {
             start_note = 1;
             event.data.note.note = note[i];
@@ -106,7 +106,7 @@ run_plugin(int i, int count)
             if (note[i] > 100) note[i] = 36;
             delay[i] += SAMPLE_RATE / 8;
         }
-    
+
         if (start_note) {
             descriptor[i]->run_multiple_synths(1, &handle[i], HEXTER_NUGGET_SIZE, events, &nevents[1]);
         } else {
@@ -190,4 +190,3 @@ main(int argc, char **argv)
 
     return 0;
 }
-

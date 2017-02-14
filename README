@@ -39,7 +39,7 @@ Requirements
 ============
 hexter requires the following:
 
-    - DSSI version 0.4 or greater, available from the 
+    - DSSI version 0.4 or greater, available from the
         dssi.sourceforge.net address above.
 
     - liblo version 0.12 or greater (0.23 or greater recommended), a
@@ -100,7 +100,7 @@ aren't particularly helpful, so try this instead:
 4. Enable debugging information if you desire: edit the file
     src/hexter.h, and define DSSP_DEBUG as explained in the
     comments.
-    
+
 5. Do 'make'.  Hopefully it should build without warnings (or
     errors.)
 
@@ -223,11 +223,11 @@ controls for configuring hexter:
     the plugin to one of the following:
     'Off'  - polyphonic operation.
     'On'   - monophonic operation, where the envelopes are
-             retriggered upon each incoming note on event. 
+             retriggered upon each incoming note on event.
     'Once' - monophonic operation, where the envelopes are triggered
              only on the first note on of a legato phrase -- that
              is, if you hold one note while playing a second, the
-             envelopes will not be retriggered for the second note. 
+             envelopes will not be retriggered for the second note.
     'Both' - monophonic operation, where the envelopes are
              retriggered at each note on, and upon note off when
              other keys are still held.
@@ -357,9 +357,9 @@ NRPN  10                       |     6    | Keyboard Level Scaling Right Depth
 NRPN  11                       |     6    | Keyboard Level Scaling Left Curve
 NRPN  12                       |     6    | Keyboard Level Scaling Right Curve
 NRPN  13                       |     6    | Keyboard Rate Scaling
-NRPN  14                       |     6    | Amp Mod Sensitivity   
+NRPN  14                       |     6    | Amp Mod Sensitivity
 NRPN  15                       |     6    | Keyboard Velocity Sensitivity
-NRPN  16                       |     6    | Operator Output Level  
+NRPN  16                       |     6    | Operator Output Level
 NRPN  17                       |   * 6    | Oscillator Mode
 NRPN  18                       |   * 6    | Oscillator Frequency Coarse
 NRPN  19                       |   * 6    | Oscillator Frequency Fine
@@ -378,9 +378,9 @@ NRPN  31                       |     5    | Keyboard Level Scaling Right Depth
 NRPN  32                       |     5    | Keyboard Level Scaling Left Curve
 NRPN  33                       |     5    | Keyboard Level Scaling Right Curve
 NRPN  34                       |     5    | Keyboard Rate Scaling
-NRPN  35                       |     5    | Amp Mod Sensitivity   
+NRPN  35                       |     5    | Amp Mod Sensitivity
 NRPN  36                       |     5    | Keyboard Velocity Sensitivity
-NRPN  37                       |     5    | Operator Output Level  
+NRPN  37                       |     5    | Operator Output Level
 NRPN  38                       |   * 5    | Oscillator Mode
 NRPN  39                       |   * 5    | Oscillator Frequency Coarse
 NRPN  40                       |   * 5    | Oscillator Frequency Fine
@@ -399,9 +399,9 @@ NRPN  52                       |     4    | Keyboard Level Scaling Right Depth
 NRPN  53                       |     4    | Keyboard Level Scaling Left Curve
 NRPN  54                       |     4    | Keyboard Level Scaling Right Curve
 NRPN  55                       |     4    | Keyboard Rate Scaling
-NRPN  56                       |     4    | Amp Mod Sensitivity   
+NRPN  56                       |     4    | Amp Mod Sensitivity
 NRPN  57                       |     4    | Keyboard Velocity Sensitivity
-NRPN  58                       |     4    | Operator Output Level  
+NRPN  58                       |     4    | Operator Output Level
 NRPN  59                       |   * 4    | Oscillator Mode
 NRPN  60                       |   * 4    | Oscillator Frequency Coarse
 NRPN  61                       |   * 4    | Oscillator Frequency Fine
@@ -420,9 +420,9 @@ NRPN  73                       |     3    | Keyboard Level Scaling Right Depth
 NRPN  74                       |     3    | Keyboard Level Scaling Left Curve
 NRPN  75                       |     3    | Keyboard Level Scaling Right Curve
 NRPN  76                       |     3    | Keyboard Rate Scaling
-NRPN  77                       |     3    | Amp Mod Sensitivity   
+NRPN  77                       |     3    | Amp Mod Sensitivity
 NRPN  78                       |     3    | Keyboard Velocity Sensitivity
-NRPN  79                       |     3    | Operator Output Level  
+NRPN  79                       |     3    | Operator Output Level
 NRPN  80                       |   * 3    | Oscillator Mode
 NRPN  81                       |   * 3    | Oscillator Frequency Coarse
 NRPN  82                       |   * 3    | Oscillator Frequency Fine
@@ -441,9 +441,9 @@ NRPN  94                       |     2    | Keyboard Level Scaling Right Depth
 NRPN  95                       |     2    | Keyboard Level Scaling Left Curve
 NRPN  96                       |     2    | Keyboard Level Scaling Right Curve
 NRPN  97                       |     2    | Keyboard Rate Scaling
-NRPN  98                       |     2    | Amp Mod Sensitivity   
+NRPN  98                       |     2    | Amp Mod Sensitivity
 NRPN  99                       |     2    | Keyboard Velocity Sensitivity
-NRPN 100                       |     2    | Operator Output Level  
+NRPN 100                       |     2    | Operator Output Level
 NRPN 101                       |   * 2    | Oscillator Mode
 NRPN 102                       |   * 2    | Oscillator Frequency Coarse
 NRPN 103                       |   * 2    | Oscillator Frequency Fine
@@ -462,9 +462,9 @@ NRPN 115                       |     1    | Keyboard Level Scaling Right Depth
 NRPN 116                       |     1    | Keyboard Level Scaling Left Curve
 NRPN 117                       |     1    | Keyboard Level Scaling Right Curve
 NRPN 118                       |     1    | Keyboard Rate Scaling
-NRPN 119                       |     1    | Amp Mod Sensitivity   
+NRPN 119                       |     1    | Amp Mod Sensitivity
 NRPN 120                       |     1    | Keyboard Velocity Sensitivity
-NRPN 121                       |     1    | Operator Output Level  
+NRPN 121                       |     1    | Operator Output Level
 NRPN 122                       |   * 1    | Oscillator Mode
 NRPN 123                       |   * 1    | Oscillator Frequency Coarse
 NRPN 124                       |   * 1    | Oscillator Frequency Fine

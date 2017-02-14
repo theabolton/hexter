@@ -358,7 +358,7 @@ hexter_select_program(LADSPA_Handle handle, unsigned long bank,
     /* ignore invalid program requests */
     if (bank || program >= 128)
         return;
-    
+
     /* Attempt the patch mutex, return if lock fails. */
     if (pthread_mutex_trylock(&instance->patches_mutex)) {
         instance->pending_program_change = program;
@@ -690,4 +690,3 @@ void _fini()
         free(hexter_DSSI_descriptor);
     }
 }
-

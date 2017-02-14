@@ -241,7 +241,7 @@ dx7_voice_check_for_dead(dx7_voice_t *voice)
 
         return 0; /* if we got this far, this carrier still has output, so return without killing voice */
     }
-    
+
     DEBUG_MESSAGE(DB_NOTE, " dx7_voice_check_for_dead: killing voice %p:%d\n", voice, voice->note_id);
     dx7_voice_off(voice);
     return 1;
@@ -941,4 +941,3 @@ dx7_voice_render(hexter_instance_t *instance, dx7_voice_t *voice,
             voice->volume_value = voice->volume_target;
     }
 }
-

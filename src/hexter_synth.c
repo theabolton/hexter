@@ -40,7 +40,7 @@ extern hexter_synth_t hexter_synth;
 
 /*
  * dx7_voice_off
- * 
+ *
  * turn off a voice immediately
  */
 inline void
@@ -239,7 +239,7 @@ hexter_synth_free_voice_by_kill(hexter_instance_t *instance)
          * from the priority - an older voice is just a little bit less
          * important than a younger voice. */
         this_voice_prio -= (hexter_synth.note_id - voice->note_id);
-    
+
         /* -FIX- not yet implemented:
          * /= take a rough estimate of loudness into account. Louder voices are more important. =/
          * if (voice->volenv_section != FLUID_VOICE_ENVATTACK){
@@ -292,7 +292,7 @@ hexter_synth_alloc_voice(hexter_instance_t* instance, unsigned char key)
                 break;
             }
         }
-    
+
         /* if not, then stop a running voice. */
         if (voice == NULL) {
             voice = hexter_synth_free_voice_by_kill(NULL);
@@ -927,7 +927,7 @@ hexter_instance_handle_patches(hexter_instance_t *instance, const char *key,
     }
 
     if ((instance->current_program / 32) == section &&
-        instance->current_program != instance->overlay_program) 
+        instance->current_program != instance->overlay_program)
         dx7_patch_unpack(instance->patches, instance->current_program,
                          instance->current_patch_buffer);
 
@@ -1134,7 +1134,7 @@ hexter_synth_render_voices(unsigned long samples_done,
     /* render each active voice */
     for (i = 0; i < hexter_synth.global_polyphony; i++) {
         voice = hexter_synth.voice[i];
-    
+
         if (_PLAYING(voice)) {
             if (voice->mods_serial != voice->instance->mods_serial) {
                 dx7_voice_update_mod_depths(voice->instance, voice);
@@ -1146,4 +1146,3 @@ hexter_synth_render_voices(unsigned long samples_done,
         }
     }
 }
-

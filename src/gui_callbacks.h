@@ -85,4 +85,3 @@ void patches_clist_set_program(void);
 void rebuild_patches_clist(void);
 
 #endif  /* _GUI_CALLBACKS_H */
-

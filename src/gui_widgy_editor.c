@@ -437,9 +437,9 @@ scaling_expose(GtkWidget *widget, GdkEventExpose *event, gpointer data)
 
     for (i = 0; i < 128; i++) {
         int scaled_output_level = ol;
-    
+
         if (i < bkpt + 21 && l_depth) {
-    
+
             /* On the original DX7/TX7, keyboard level scaling calculations
              * group the keyboard into groups of three keys.  This can be quite
              * noticeable on patches with extreme scaling depths, so I've tried
@@ -451,7 +451,7 @@ scaling_expose(GtkWidget *widget, GdkEventExpose *event, gpointer data)
 #else
             n = bkpt - i + 21;
 #endif
-    
+
             switch(l_curve) {
               case 0: /* -LIN */
                 scaled_output_level -= (int)((float)n / 45.0f * (float)l_depth);
@@ -846,7 +846,7 @@ on_combo_adjustment_changed(GtkAdjustment *adjustment,
     gtk_combo_box_set_active(w, gtk_adjustment_get_value(adjustment));
     g_signal_handlers_unblock_by_func(G_OBJECT(w), on_combo_changed, (gpointer)adjustment);
 }
-                            
+
 static void
 on_combo_changed(GtkComboBox *widget,
                  gpointer     user_data)
@@ -1110,4 +1110,3 @@ create_widgy_editor(const char *tag)
 
     return widgy_widget;
 }
-

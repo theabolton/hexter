@@ -44,7 +44,7 @@ GtkWidget *retro_widget;
 #define CONSOLE_HEIGHT  21
 
 enum textcolor {COLOR_MSG = 1, COLOR_LABEL, COLOR_DATA, COLOR_BLOCK,
-                COLOR_CURSOR, COLOR_BCURSOR, 
+                COLOR_CURSOR, COLOR_BCURSOR,
                 COLOR_OPON = COLOR_LABEL,
                 COLOR_OPOFF = COLOR_MSG };
 
@@ -454,7 +454,7 @@ cprintf(const char *fmt, ...) {
     va_end(ap);
 
     rc_console_addstr(tbuf);
-} 
+}
 
 static void
 cputch(int c) {
@@ -468,7 +468,7 @@ csetcolor(enum textcolor c)
 }
 
 //- void clrtoeol(void) { ; } // -FIX-
-//- 
+//-
 //- void
 //- paktc(void)
 //- {
@@ -479,7 +479,7 @@ csetcolor(enum textcolor c)
 //-     cprintf("\r");
 //-     clrtoeol();
 //- }
-//- 
+//-
 //- static void
 //- gotomsg(void)
 //- {
@@ -500,7 +500,7 @@ ve_ShowAlg(void)
     csetcolor(COLOR_LABEL);
     for (y = 11; y <= 19; y++) {
         x = 56;
-	cmove(y, x);
+        cmove(y, x);
         for (; x <= 72; x++) {
             switch (*s) {
                 case '1':   t = (!!(re_OpSelect&32));  goto printop;
@@ -789,7 +789,7 @@ re_Dec(int parm)
 {
     unsigned char val = patch_edit_get_edit_parameter(reParm[parm].Offset),
                   max;
-    
+
     max = re_parm_type_max[reParm[parm].Type];
     if (!max) return;
     if (val)
@@ -960,7 +960,7 @@ static void
 _re_SetOps(void)
 {
 //+     guint8 bd[7];
-//+ 
+//+
 //+     bd[0] = 0xF0;
 //+     bd[1] = 0x43;
 //+     bd[2] = 0x10 | TXChannel;
@@ -975,16 +975,16 @@ static void
 re_SetOps(int o)
 {
 //-     guint8 i;
-//- 
+//-
 //-     re_OpSelect ^= o;
 //-     for (i = 1; i < 7; i++) {
 //-         if (re_OpSelect & (1 << (6 - i)))
 //-             csetcolor(COLOR_OPON);
 //-         else
 //-             csetcolor(COLOR_OPOFF);
-//- 	cmove(3 + i, 2);
+//-     cmove(3 + i, 2);
 //-         cprintf("%c", i + '0');
-//- 	cmove(12 + i, 2);
+//-     cmove(12 + i, 2);
 //-         cprintf("%c", i + '0');
 //-     }
 //-     /* csetcolor(COLOR_DATA);  not needed with ve_ShowAlg() */
@@ -1032,27 +1032,27 @@ re_Number(int c)
 //+ {
 //+     erase();
 //+     cprintf(" TX/Edit v" VERSIONSTRING " Voice Edit Help\n\n");
-//+ 
+//+
 //+     cprintf(" Up / Down /\n"
 //+             " Right / Left  - Move cursor\n\n");
-//+ 
+//+
 //+     cprintf(" +             - Increment field\n"
 //+             " -             - Decrement field\n"
 //+             " 0 through 9   - Enter data into field\n"
 //+             " Backspace     - Zero/reset field\n\n");
-//+ 
+//+
 //+     cprintf(" A through Z   - Rotate letters into name (name field only)\n\n"
-//+ 
+//+
 //+             " F1 through F6 - Enable/disable operators 1 through 6\n\n");
-//+ 
+//+
 //+     cprintf(" Meta-P        - Put edit buffer as single voice\n"
 //+             " Meta-!        - Erase edit buffer to init voice\n"
 //+             " PgUp / PgDn   - Move to previous / next voice\n"
-//+ 
+//+
 //+             " Esc / Meta-L  - Return to librarian mode\n\n"
-//+ 
+//+
 //+             " h / Meta-H    - Display this help screen\n\n");
-//+ 
+//+
 //+     paktc();
 //+     ve_SetScreen();
 //+     ve_DoScreen();
@@ -1204,4 +1204,3 @@ create_retro_editor(const char *tag)
 
     return retro_widget;
 }
-

@@ -87,4 +87,3 @@ void we_alg_drawing_area_new(void);
 void we_alg_draw(cairo_t *cr, int alg);
 
 #endif /* _GUI_PATCH_EDIT_H */
-

@@ -31,4 +31,3 @@ int  sysex_start(sysex_callback_function *sysex_handler, char **error_message);
 void sysex_stop(void);
 
 #endif /* _GUI_MIDI_H */
-

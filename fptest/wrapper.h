@@ -121,4 +121,3 @@
 #define hexter_synth_all_voices_off              FP_TAG(hexter_synth_all_voices_off)
 #define hexter_synth_handle_global_polyphony     FP_TAG(hexter_synth_handle_global_polyphony)
 #define hexter_synth_render_voices               FP_TAG(hexter_synth_render_voices)
-

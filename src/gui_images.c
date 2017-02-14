@@ -84,4 +84,3 @@ create_about_pixmap(GtkWidget *window)
 {
     return create_pixmap_from_xpm(window, bitmap_about_xpm);
 }
-

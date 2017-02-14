@@ -57,4 +57,3 @@ void rc_console_init_color_pair(int pair, int fg, int bg);
 void rc_console_set_color_pair(int pair);
 
 #endif  /* GUI_RETRO_CONSOLE_H */
-

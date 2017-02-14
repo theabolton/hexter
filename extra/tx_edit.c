@@ -28,7 +28,7 @@
  * License along with this program; if not, write to the Free
  * Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301 USA.
- * 
+ *
  * Revision History:
  * 20040126 Sean Bolton - made help functions helpful, added ALSA support
  * 20040205 Sean Bolton - clean up display with noecho, line drawing
@@ -748,7 +748,7 @@ MidiInit(void)  /* returns TRUE if successful */
 #ifdef USE_ALSA_MIDI
 
     const char *device = "hw";   /* could also be "default" */
-    
+
  /* if (snd_seq_open(&MidiHandle, device, SND_SEQ_OPEN_DUPLEX, SND_SEQ_NONBLOCK) < 0) { */
     if (snd_seq_open(&MidiHandle, device, SND_SEQ_OPEN_OUTPUT, 0) < 0) {
         fprintf(stderr, "MidiInit: could not open sequencer: %s\n", snd_strerror(errno));
@@ -829,7 +829,7 @@ cprintf(const char *fmt, ...) {
     (void) vsnprintf(tbuf, 512, fmt, ap);
     va_end(ap);
     addstr(tbuf);
-} 
+}
 
 int
 cputch(int c) {
@@ -842,8 +842,8 @@ cgetch(void)
     int c = getch();
 
     if(c == 27) {
-	c = getch();
-	if (isalpha(c)) c = tolower(c);
+        c = getch();
+        if (isalpha(c)) c = tolower(c);
         return 0x200 + c;
     }
     return c;
@@ -984,10 +984,10 @@ PutMidiMsg(UBYTE *buf, unsigned int size)
 
 #else /* not USE_ALSA_MIDI: */
     FILE *fh;
-    
+
     if ((fh = fopen("/dev/midi00", "wb"))) {  /* should fix this.... */
-	fwrite(buf, 1, size, fh);
-	fclose(fh);
+        fwrite(buf, 1, size, fh);
+        fclose(fh);
     }
 #endif /* USE_ALSA_MIDI */
 }
@@ -1075,7 +1075,7 @@ FileRequest(char *namebuf, char *title)
     cprintf(" %s\n\n Enter filename:\n > ",title);
     refresh();
     if (wgetnstr(stdscr, namebuf, 76) == ERR) {
-	namebuf[0] = 0;
+        namebuf[0] = 0;
     }
     noecho(); curs_set(0);
     cprintf("\n");
@@ -1153,10 +1153,10 @@ Load(char *filename)
     filename_length = strlen (filename);
 
     /* check if the file is a standard MIDI file */
-    if (raw_patch_data[0] == 0x4d &&	/* "M" */
-        raw_patch_data[1] == 0x54 &&	/* "T" */
-        raw_patch_data[2] == 0x68 &&	/* "h" */
-        raw_patch_data[3] == 0x64)	/* "d" */
+    if (raw_patch_data[0] == 0x4d &&    /* "M" */
+        raw_patch_data[1] == 0x54 &&    /* "T" */
+        raw_patch_data[2] == 0x68 &&    /* "h" */
+        raw_patch_data[3] == 0x64)      /* "d" */
         midshift = 2;
     else
         midshift = 0;
@@ -1165,7 +1165,7 @@ Load(char *filename)
     count = 0;
     datastart = 0;
     for (patchstart = 0; patchstart + midshift + 5 < filelength; patchstart++) {
-        
+
         if (raw_patch_data[patchstart] == 0xf0 &&
             raw_patch_data[patchstart + 1 + midshift] == 0x43 &&
             raw_patch_data[patchstart + 2 + midshift] <= 0x0f &&
@@ -1179,10 +1179,10 @@ Load(char *filename)
             count += 32;
             patchstart += 4104;
 
-        } else if (raw_patch_data[patchstart] == 0xf0 && 
-                   raw_patch_data[patchstart + midshift + 1] == 0x43 && 
-                   raw_patch_data[patchstart + midshift + 2] <= 0x0f && 
-                   raw_patch_data[patchstart + midshift + 4] == 0x01 && 
+        } else if (raw_patch_data[patchstart] == 0xf0 &&
+                   raw_patch_data[patchstart + midshift + 1] == 0x43 &&
+                   raw_patch_data[patchstart + midshift + 2] <= 0x0f &&
+                   raw_patch_data[patchstart + midshift + 4] == 0x01 &&
                    raw_patch_data[patchstart + midshift + 5] == 0x1b &&
                    patchstart + midshift + 162 < filelength &&
                    raw_patch_data[patchstart + midshift + 162] == 0xf7) {  /* DX7 single voice (edit buffer) dump */
@@ -1196,7 +1196,7 @@ Load(char *filename)
             patchstart += DX7_DUMP_SIZE_VOICE_SINGLE;
         }
     }
-            
+
     /* assume raw DX7/TX7 data if no SysEx header was found. */
     /* assume the user knows what she is doing ;-) */
 
@@ -1232,7 +1232,7 @@ Load(char *filename)
         filelength = 4096;
     }
 
-    /* Voyetra SIDEMAN DX/TX 
+    /* Voyetra SIDEMAN DX/TX
      * Voyetra Patchmaster DX7/TX7 */
     if ((filelength == 9816 || filelength == 5663) &&
         raw_patch_data[0] == 0xdf &&
@@ -1344,12 +1344,12 @@ Save(int vstart, int vend)  /* range is inclusive, filename in FNameBuff */
 
     if ((fh = fopen(FNameBuff, "wb")) != 0) {
         flength = (vend - vstart + 1) * DX7_VOICE_SIZE_PACKED;
-	if (flength != fwrite(voiceAddr(vstart), 1, flength, fh)) {
+        if (flength != fwrite(voiceAddr(vstart), 1, flength, fh)) {
             cprintf("Save - Error writing file '%s':\n", FNameBuff);
             cprintf(" '%s'!\n", strerror(errno));
             paktc();
         }
-	fclose(fh);
+        fclose(fh);
     } else {
         cprintf("Save - Error opening file '%s':\n", FNameBuff);
         cprintf(" '%s'!\n", strerror(errno));
@@ -1371,7 +1371,7 @@ ve_ShowAlg(void)
     textattr(COLOR_LABEL);
     for (y = 12; y <= 20; y++) {
         x = 56;
-	move(y, x);
+        move(y, x);
         for (; x <= 72; x++) {
             switch (*s) {
                 case '1':   t = (!!(ve_OpSelect&32));  goto printop;
@@ -1667,7 +1667,7 @@ ve_Inc(int parm)
 {
     unsigned char val = SingleData[veParm[parm].Offset],
                   max;
-    
+
     max = vtypemax[veParm[parm].Type];
     if (!max) return;
     if (++val > max) val = 0;
@@ -1681,7 +1681,7 @@ ve_Dec(int parm)
 {
     unsigned char val = SingleData[veParm[parm].Offset],
                   max;
-    
+
     max = vtypemax[veParm[parm].Type];
     if (!max) return;
     if (val)
@@ -1912,9 +1912,9 @@ ve_SetOps(int o)
             textattr(COLOR_OPON);
         else
             textattr(COLOR_OPOFF);
-	move(3 + i, 2);
+        move(3 + i, 2);
         cprintf("%c", i + '0');
-	move(12 + i, 2);
+        move(12 + i, 2);
         cprintf("%c", i + '0');
     }
     /* textattr(COLOR_DATA);  not needed with ve_ShowAlg() */
@@ -1928,7 +1928,7 @@ ve_Number(int c)
     unsigned char val = SingleData[veParm[ve_Cursor].Offset],
                   typ = veParm[ve_Cursor].Type,
                   max = vtypemax[typ];
-    
+
     switch(typ) {
         case vpt0_99:
         case vptFF:
@@ -2048,11 +2048,11 @@ LibPrintVName(int voice)  /* print name at correct cursor position */
         move((voice-Voice_TOS)%LibRows + 2,
              (voice-Voice_TOS)/LibRows * 15 + 1);
         if (voice<Voices) {
-	    textattr(COLOR_LABEL);
-	    if (voice < 10000) {
+            textattr(COLOR_LABEL);
+            if (voice < 10000) {
                 cprintf("%4d ", voice);
             } else {
-		cprintf("?%03d ", voice % 1000);
+                cprintf("?%03d ", voice % 1000);
             }
             if (voice==Voice_Cursor) {
                 if(blocking)
@@ -2072,7 +2072,7 @@ LibPrintVName(int voice)  /* print name at correct cursor position */
             textattr(COLOR_DATA);
         } else {
             cprintf("               ");
-	}
+        }
     }
 }
 
@@ -2265,7 +2265,7 @@ LibCtrlPgDn(void)
 {
     if (Voice_Cursor < Voices-1) {
         int oldvc, newvc;
-        
+
         oldvc = Voice_Cursor;
         Voice_Cursor = newvc = min(((Voice_Cursor + 33) & 0xffe0) - 1, Voices - 1);
         CheckBlock();
@@ -2329,7 +2329,7 @@ LibPgDn(void)
 {
     if (Voice_Cursor < Voices-1) {
         int oldvc, newvc;
-        
+
         oldvc = Voice_Cursor;
         Voice_Cursor = newvc = min(((Voice_Cursor + 17) & 0xfff0) - 1, Voices - 1);
         CheckBlock();
@@ -2350,7 +2350,7 @@ LibPgDn(void)
 void
 LibCtrlRight(void)
 {
-    
+
     Voice_Cursor = min(Voice_Cursor + LibNames, Voices - 1);
     Voice_TOS    = min(Voice_TOS    + LibNames, max(Voices - LibNames, 0));
     CheckBlock();
@@ -2375,7 +2375,7 @@ LBA_Copy(void)
     if (!blocked) { cprintf("LBA_Copy - not Blocked?!"); return; }
 #endif
     memmove(voiceAddr(Voice_Cursor),
-	    voiceAddr(Voice_BStart),
+            voiceAddr(Voice_BStart),
            min(Voice_BEnd - Voice_BStart + 1, Voices - Voice_Cursor) * DX7_VOICE_SIZE_PACKED);
     CancelBlock();
 }
@@ -2398,7 +2398,7 @@ LibDelete(void)
     SetBlock();
     if (Voices > Voice_BEnd + 1)
         memmove(voiceAddr(Voice_BStart),
-		voiceAddr(Voice_BEnd + 1),
+                voiceAddr(Voice_BEnd + 1),
                (Voices - Voice_BEnd - 1) * DX7_VOICE_SIZE_PACKED);
     for (i = Voices - Voice_BEnd + Voice_BStart - 1; i < Voices; EraseVoice(i++));
     CancelBlock();

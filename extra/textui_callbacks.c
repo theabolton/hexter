@@ -4,7 +4,7 @@
  *
  * Portions of this file came from readline 4.3, copyright
  * (c) 1987-2002 Free Software Foundation, Inc.
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
  * published by the Free Software Foundation; either version 2 of
@@ -99,7 +99,7 @@ command_program(char *args)
         printf("invalid patch number\n");
         return;
     }
- 
+
     current_program = prog;
 
     /* set all the patch edit widgets to match */
@@ -218,9 +218,9 @@ command_quit(char *args)
    can understand. */
 
 typedef struct {
-  char *name;			/* User printable name of the function. */
-  rl_vcpfunc_t *func;		/* Function to call to do the job. */
-  char *doc;			/* Documentation for this function.  */
+  char *name;                   /* User printable name of the function. */
+  rl_vcpfunc_t *func;           /* Function to call to do the job. */
+  char *doc;                    /* Documentation for this function.  */
 } COMMAND;
 
 void command_help(char *);
@@ -270,7 +270,7 @@ stripwhite (string)
 
   for (s = string; whitespace (*s); s++)
     ;
-    
+
   if (*s == 0)
     return (s);
 
@@ -457,4 +457,3 @@ update_global_polyphony(const char *value)
         /* if the UI is displaying the global polyphony, it should be updated now. */
     }
 }
-

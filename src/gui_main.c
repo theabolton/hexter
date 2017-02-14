@@ -34,7 +34,7 @@
 #include <gtk/gtk.h>
 #include <lo/lo.h>
 #include <dssi.h>
- 
+
 #include "hexter_types.h"
 #include "hexter.h"
 #include "gui_main.h"
@@ -436,4 +436,3 @@ main(int argc, char *argv[])
 
     return 0;
 }
-

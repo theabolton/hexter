@@ -39,4 +39,3 @@ void  gui_data_send_edit_buffer_off(void);
 void  gui_data_send_performance_buffer(uint8_t *performance_buffer);
 
 #endif /* _GUI_DATA_H */
-

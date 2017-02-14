@@ -89,4 +89,3 @@
 #define HEXTER_PORTS_COUNT  3
 
 #endif /* _HEXTER_H */
-

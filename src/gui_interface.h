@@ -86,4 +86,3 @@ void set_window_title(GtkWidget *window, const char *tag, const char *text);
 void create_windows(const char *instance_tag);
 
 #endif /* _GUI_INTERFACE_H */
-

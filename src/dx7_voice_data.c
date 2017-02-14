@@ -453,4 +453,3 @@ hexter_data_performance_init(uint8_t *performance)
 {
     memcpy(performance, &dx7_init_performance, DX7_PERFORMANCE_SIZE);
 }
-

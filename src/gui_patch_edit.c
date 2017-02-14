@@ -69,7 +69,7 @@ static pe_voice_parameter_t pe_voice_parameter[DX7_VOICE_PARAMETERS - 1 /* omitt
     { PEPT_FC         }, /*  18 FC */
     { PEPT_FF         }, /*  19 FF */
     { PEPT_Detune     }, /*  20 Detune */
-                               
+
     { PEPT_Env        }, /*  21 R1 */
     { PEPT_Env        }, /*  22 R2 */
     { PEPT_Env        }, /*  23 R3 */
@@ -91,7 +91,7 @@ static pe_voice_parameter_t pe_voice_parameter[DX7_VOICE_PARAMETERS - 1 /* omitt
     { PEPT_FC         }, /*  39 FC */
     { PEPT_FF         }, /*  40 FF */
     { PEPT_Detune     }, /*  41 Detune */
-                               
+
     { PEPT_Env        }, /*  42 R1 */
     { PEPT_Env        }, /*  43 R2 */
     { PEPT_Env        }, /*  44 R3 */
@@ -113,7 +113,7 @@ static pe_voice_parameter_t pe_voice_parameter[DX7_VOICE_PARAMETERS - 1 /* omitt
     { PEPT_FC         }, /*  60 FC */
     { PEPT_FF         }, /*  61 FF */
     { PEPT_Detune     }, /*  62 Detune */
-                               
+
     { PEPT_Env        }, /*  63 R1 */
     { PEPT_Env        }, /*  64 R2 */
     { PEPT_Env        }, /*  65 R3 */
@@ -135,7 +135,7 @@ static pe_voice_parameter_t pe_voice_parameter[DX7_VOICE_PARAMETERS - 1 /* omitt
     { PEPT_FC         }, /*  81 FC */
     { PEPT_FF         }, /*  82 FF */
     { PEPT_Detune     }, /*  83 Detune */
-                               
+
     { PEPT_Env        }, /*  84 R1 */
     { PEPT_Env        }, /*  85 R2 */
     { PEPT_Env        }, /*  86 R3 */
@@ -157,7 +157,7 @@ static pe_voice_parameter_t pe_voice_parameter[DX7_VOICE_PARAMETERS - 1 /* omitt
     { PEPT_FC         }, /* 102 FC */
     { PEPT_FF         }, /* 103 FF */
     { PEPT_Detune     }, /* 104 Detune */
-                               
+
     { PEPT_Env        }, /* 105 R1 */
     { PEPT_Env        }, /* 106 R2 */
     { PEPT_Env        }, /* 107 R3 */
@@ -179,7 +179,7 @@ static pe_voice_parameter_t pe_voice_parameter[DX7_VOICE_PARAMETERS - 1 /* omitt
     { PEPT_FC         }, /* 123 FC */
     { PEPT_FF         }, /* 124 FF */
     { PEPT_Detune     }, /* 125 Detune */
-                               
+
     { PEPT_Env        }, /* 126 Pitch Envelope R1 */
     { PEPT_Env        }, /* 127 */
     { PEPT_Env        }, /* 128 */
@@ -410,7 +410,7 @@ void
 on_editor_save_button_press(GtkWidget *widget, gpointer data)
 {
     GUIDB_MESSAGE(DB_GUI, ": on_editor_save_button_press called\n");
-    
+
     (GTK_ADJUSTMENT(edit_save_position_spin_adj))->value = (double)edit_buffer.program;
     /* update patch name */
     gtk_signal_emit_by_name (GTK_OBJECT (edit_save_position_spin_adj), "value_changed");
@@ -669,4 +669,3 @@ create_editor_window(const char *tag)
 
     return editor_window;
 }
-

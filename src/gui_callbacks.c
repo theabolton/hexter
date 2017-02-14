@@ -161,7 +161,7 @@ on_import_file_ok( GtkWidget *widget, gpointer data )
 
     /* update patch name */
     gtk_signal_emit_by_name (GTK_OBJECT (import_file_position_spin_adj), "value_changed");
-    
+
     gtk_widget_show(import_file_position_window);
 }
 
@@ -425,7 +425,7 @@ on_polyphony_change(GtkWidget *widget, gpointer data)
     int which = (int)data;
     int polyphony = lrintf(GTK_ADJUSTMENT(widget)->value);
     char buffer[4];
-    
+
     if (internal_gui_update_only) {
         /* GUIDB_MESSAGE(DB_GUI, " on_polyphony_change: skipping further action\n"); */
         return;
@@ -856,7 +856,7 @@ void
 update_edit_buffer(const char *value)
 {
     GUIDB_MESSAGE(DB_OSC, ": update_edit_buffer called\n");
-    
+
     if (!strcmp(value, "off")) {
 
         edit_buffer.program = current_program;
@@ -1044,4 +1044,3 @@ rebuild_patches_clist(void)
 
     patches_clist_set_program();
 }
-
