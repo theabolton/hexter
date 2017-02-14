@@ -263,7 +263,7 @@ void
 patch_edit_on_edit_adj_changed(GtkAdjustment *adj, gpointer data)
 {
     float value = adj->value;
-    int offset = (int)data;
+    int offset = GPOINTER_TO_INT(data);
 
     /* GUIDB_MESSAGE(DB_GUI, ": patch_edit_on_edit_adj_changed: offset %d, value %f\n", offset, value); */
     edit_buffer.voice[offset] = value;
@@ -295,7 +295,7 @@ patch_edit_connect_to_model(void)
 
     for (i = 0; i < DX7_VOICE_PARAMETERS - 1 /* omitting name */; i++) {
         g_signal_connect (G_OBJECT(edit_adj[i]), "value-changed",
-                          G_CALLBACK (patch_edit_on_edit_adj_changed), (gpointer)i);
+                          G_CALLBACK (patch_edit_on_edit_adj_changed), GINT_TO_POINTER(i));
     }
 }
 
@@ -340,10 +340,10 @@ patch_edit_update_editors(void)
         GTK_ADJUSTMENT(edit_adj[i])->value = (float)edit_buffer.voice[i];
         /* temporarily block signal to model, then update adjustment */
         g_signal_handlers_block_by_func(G_OBJECT(edit_adj[i]), patch_edit_on_edit_adj_changed,
-                                        (gpointer)i);
+                                        GINT_TO_POINTER(i));
         gtk_adjustment_value_changed(GTK_ADJUSTMENT(edit_adj[i]));
         g_signal_handlers_unblock_by_func(G_OBJECT(edit_adj[i]), patch_edit_on_edit_adj_changed,
-                                          (gpointer)i);
+                                          GINT_TO_POINTER(i));
     }
     /* update name entry */
     patch_edit_copy_name_to_utf8(name, edit_buffer.voice, FALSE);

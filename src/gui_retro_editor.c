@@ -765,9 +765,9 @@ re_set_edit_parameter(int offset, int val)
         return;
 
     /* temporarily block reverse signal, then update the adjustment */
-    g_signal_handlers_block_by_func(G_OBJECT(edit_adj[offset]), re_on_adj_changed, (gpointer)offset);
+    g_signal_handlers_block_by_func(G_OBJECT(edit_adj[offset]), re_on_adj_changed, GINT_TO_POINTER(offset));
     gtk_adjustment_set_value(GTK_ADJUSTMENT(edit_adj[offset]), (float)val);
-    g_signal_handlers_unblock_by_func(G_OBJECT(edit_adj[offset]), re_on_adj_changed, (gpointer)offset);
+    g_signal_handlers_unblock_by_func(G_OBJECT(edit_adj[offset]), re_on_adj_changed, GINT_TO_POINTER(offset));
 }
 
 static void
@@ -1159,7 +1159,7 @@ re_CharIn(gboolean pressed, guint c, guint state)
 static void
 re_on_adj_changed(GtkAdjustment *shadow_adj, gpointer data)
 {
-    int offset = (int)data;
+    int offset = GPOINTER_TO_INT(data);
     int i;
 
     /* GUIDB_MESSAGE(DB_GUI, " re_on_adj_changed: offset %d\n", offset); */
@@ -1197,7 +1197,7 @@ create_retro_editor(const char *tag)
 
     for (i = 0; i < DX7_VOICE_PARAMETERS - 1 /* omitting name */; i++) {
         g_signal_connect(G_OBJECT(edit_adj[i]), "value-changed",
-                         G_CALLBACK(re_on_adj_changed), (gpointer)i);
+                         G_CALLBACK(re_on_adj_changed), GINT_TO_POINTER(i));
     }
 
     retro_widget = rc_drawing_area;

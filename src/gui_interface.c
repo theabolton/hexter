@@ -140,7 +140,7 @@ create_performance_spin(GtkWidget *window, const char *text, GtkWidget *table,
 
     gtk_signal_connect (GTK_OBJECT (spin_button_adj), "value_changed",
                         GTK_SIGNAL_FUNC(on_performance_spin_change),
-                        (gpointer)parameter);
+                        GINT_TO_POINTER(parameter));
 }
 
 void
@@ -189,7 +189,7 @@ create_performance_assign(GtkWidget *window, const char *text,
     gtk_box_pack_start (GTK_BOX (hbox), button, FALSE, TRUE, 1);
     gtk_signal_connect (GTK_OBJECT (button), "toggled",
                         GTK_SIGNAL_FUNC (on_performance_assign_toggled),
-                        (gpointer)parameter);
+                        GINT_TO_POINTER(parameter));
 
     label = gtk_label_new ("A");
     gtk_widget_ref (label);
@@ -208,7 +208,7 @@ create_performance_assign(GtkWidget *window, const char *text,
     gtk_box_pack_start (GTK_BOX (hbox), button, FALSE, TRUE, 1);
     gtk_signal_connect (GTK_OBJECT (button), "toggled",
                         GTK_SIGNAL_FUNC (on_performance_assign_toggled),
-                        (gpointer)parameter);
+                        GINT_TO_POINTER(parameter));
 
     label = gtk_label_new ("E");
     gtk_widget_ref (label);
@@ -227,7 +227,7 @@ create_performance_assign(GtkWidget *window, const char *text,
     gtk_box_pack_start (GTK_BOX (hbox), button, FALSE, TRUE, 1);
     gtk_signal_connect (GTK_OBJECT (button), "toggled",
                         GTK_SIGNAL_FUNC (on_performance_assign_toggled),
-                        (gpointer)parameter);
+                        GINT_TO_POINTER(parameter));
 }
 
 void

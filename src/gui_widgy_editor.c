@@ -258,7 +258,7 @@ static float op_color[6][3] = {
 static gboolean
 env_expose(GtkWidget *widget, GdkEventExpose *event, gpointer data)
 {
-    int thisop = (int)data;
+    int thisop = GPOINTER_TO_INT(data);
     int r[6][4], l[6][4];
     float d[6][4], td, da, xrange;
     int op, i, width, height;
@@ -371,7 +371,7 @@ env_expose(GtkWidget *widget, GdkEventExpose *event, gpointer data)
 static gboolean
 scaling_expose(GtkWidget *widget, GdkEventExpose *event, gpointer data)
 {
-    int op = (int)data;
+    int op = GPOINTER_TO_INT(data);
     int ol      = patch_edit_get_edit_parameter(16 + (5 - op) * 21);
     int l_curve = patch_edit_get_edit_parameter(11 + (5 - op) * 21);
     int l_depth = patch_edit_get_edit_parameter( 9 + (5 - op) * 21);
@@ -618,30 +618,30 @@ static void on_shadow_adj_changed(GtkAdjustment *shadow_adj, gpointer data); /* 
 static void
 on_real_adj_changed(GtkAdjustment *real_adj, gpointer data)
 {
-    int offset = (int)data;
+    int offset = GPOINTER_TO_INT(data);
     GtkAdjustment *shadow_adj = g_object_get_data(G_OBJECT(real_adj), "shadow_adjustment");
-    int bias = (int)g_object_get_data(G_OBJECT(real_adj), "shadow_bias");
+    int bias = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(real_adj), "shadow_bias"));
 
     /* GUIDB_MESSAGE(DB_GUI, " ge on_real_adj_changed: offset %d now %d\n", offset, (int)real_adj->value); */
 
     /* temporarily block reverse signal, then update shadow adjustment */
-    g_signal_handlers_block_by_func(G_OBJECT(shadow_adj), on_shadow_adj_changed, (gpointer)offset);
+    g_signal_handlers_block_by_func(G_OBJECT(shadow_adj), on_shadow_adj_changed, GINT_TO_POINTER(offset));
     gtk_adjustment_set_value(shadow_adj, real_adj->value + (float)bias);
-    g_signal_handlers_unblock_by_func(G_OBJECT(shadow_adj), on_shadow_adj_changed, (gpointer)offset);
+    g_signal_handlers_unblock_by_func(G_OBJECT(shadow_adj), on_shadow_adj_changed, GINT_TO_POINTER(offset));
 }
 
 static void
 on_shadow_adj_changed(GtkAdjustment *shadow_adj, gpointer data)
 {
-    int offset = (int)data;
-    int bias = (int)g_object_get_data(G_OBJECT(edit_adj[offset]), "shadow_bias");
+    int offset = GPOINTER_TO_INT(data);
+    int bias = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(edit_adj[offset]), "shadow_bias"));
 
     /* GUIDB_MESSAGE(DB_GUI, " ge on_shadow_adj_changed: offset %d now %d\n", offset, (int)shadow_adj->value); */
 
     /* temporarily block reverse signal, then update the real adjustment */
-    g_signal_handlers_block_by_func(G_OBJECT(edit_adj[offset]), on_real_adj_changed, (gpointer)offset);
+    g_signal_handlers_block_by_func(G_OBJECT(edit_adj[offset]), on_real_adj_changed, GINT_TO_POINTER(offset));
     gtk_adjustment_set_value(GTK_ADJUSTMENT(edit_adj[offset]), shadow_adj->value - (float)bias);
-    g_signal_handlers_unblock_by_func(G_OBJECT(edit_adj[offset]), on_real_adj_changed, (gpointer)offset);
+    g_signal_handlers_unblock_by_func(G_OBJECT(edit_adj[offset]), on_real_adj_changed, GINT_TO_POINTER(offset));
 }
 
 /* ==== spin buttons ==== */
@@ -659,7 +659,7 @@ on_alg_changed(GtkAdjustment *adj, gpointer data)
 static void
 on_env_changed(GtkAdjustment *adj, gpointer data)
 {
-    int offset = (int)data;
+    int offset = GPOINTER_TO_INT(data);
     int op = 5 - (offset / 21);  /* 0 to 5, or -1 for pitch envelope */
 
     if (op >= 0) {
@@ -708,7 +708,7 @@ on_freq_changed(GtkAdjustment *adj, gpointer data)
 {
     /* float value = adj->value;   -- for FC or FF */
     /* int mode = (int)adj->value; -- for mode */
-    int offset = (int)data;
+    int offset = GPOINTER_TO_INT(data);
     int op = 5 - ((offset - 17) / 21);  /* 0 to 5 */
 
     /* GUIDB_MESSAGE(DB_GUI, " ge on_freq_changed: offset %d, operator %d\n", offset, op); */
@@ -720,7 +720,7 @@ static void
 on_bkpt_changed(GtkAdjustment *adj, gpointer data)
 {
     int bkpt = (int)adj->value;
-    int offset = (int)data;
+    int offset = GPOINTER_TO_INT(data);
     int op = 5 - ((offset - 8) / 21);  /* 0 to 5 */
 
     /* GUIDB_MESSAGE(DB_GUI, " ge on_bkpt_changed: op %d breakpoint now %d\n", op, bkpt); */
@@ -733,7 +733,7 @@ on_bkpt_changed(GtkAdjustment *adj, gpointer data)
 static void
 on_scaling_changed(GtkAdjustment *adj, gpointer data)
 {
-    int offset = (int)data;
+    int offset = GPOINTER_TO_INT(data);
     int op = 5 - (offset / 21);  /* 0 to 5 */
 
     gtk_widget_queue_draw (scaling_drawing_area[op]);
@@ -757,7 +757,7 @@ place_spin(GtkObject *adj, GtkWidget *table, int x, int y)
 static void
 update_switch_label_text(GtkToggleButton *t)
 {
-    int type = (int)g_object_get_data(G_OBJECT(t), "parameter_type");
+    int type = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(t), "parameter_type"));
     GtkWidget *label = gtk_bin_get_child(GTK_BIN(t));
     gboolean state = gtk_toggle_button_get_active(t);
 
@@ -815,7 +815,7 @@ place_switch(GtkObject *adj, GtkWidget *table, int x, int y, int type)
 {
     GtkWidget *w = gtk_toggle_button_new_with_label ("-");
 
-    g_object_set_data(G_OBJECT(w), "parameter_type", (gpointer)type);
+    g_object_set_data(G_OBJECT(w), "parameter_type", GINT_TO_POINTER(type));
     gtk_table_attach (GTK_TABLE (table), w, x, x + 1, y, y + 1,
                       (GtkAttachOptions) (0),
                       (GtkAttachOptions) (0), 0, 0);
@@ -903,18 +903,18 @@ place_widget(int type, int tab, int x, int y, int offset)
       case PEPT_Env:
         place_spin(edit_adj[offset], tables[tab], x, y);
         g_signal_connect (G_OBJECT(edit_adj[offset]), "value-changed",
-                          G_CALLBACK (on_env_changed), (gpointer)offset);
+                          G_CALLBACK (on_env_changed), GINT_TO_POINTER(offset));
         break;
       case PEPT_FC:
       case PEPT_FF:
         place_spin(edit_adj[offset], tables[tab], x, y);
         g_signal_connect (G_OBJECT(edit_adj[offset]), "value-changed",
-                          G_CALLBACK (on_freq_changed), (gpointer)offset);
+                          G_CALLBACK (on_freq_changed), GINT_TO_POINTER(offset));
         break;
       case PEPT_Mode:
         place_switch(edit_adj[offset], tables[tab], x, y, PEPT_Mode);
         g_signal_connect (G_OBJECT(edit_adj[offset]), "value-changed",
-                          G_CALLBACK (on_freq_changed), (gpointer)offset);
+                          G_CALLBACK (on_freq_changed), GINT_TO_POINTER(offset));
         break;
       case PEPT_Alg:     /* 0 to 31, algorithm, as 1 to 32 */
       case PEPT_Detune:  /* 0 to 14, detune,    as -7 to +7 */
@@ -934,26 +934,26 @@ place_widget(int type, int tab, int x, int y, int offset)
             shadow_adj = gtk_adjustment_new(bias, bias, range + bias, 1, (range > 10) ? 10 : 1, 0);
             place_spin(shadow_adj, tables[tab], x, y);
             g_signal_connect (G_OBJECT(shadow_adj), "value-changed",
-                              G_CALLBACK (on_shadow_adj_changed), (gpointer)offset);
+                              G_CALLBACK (on_shadow_adj_changed), GINT_TO_POINTER(offset));
             /* edit_adj[offset] is the 'real' adjustment */
             g_object_set_data(G_OBJECT(edit_adj[offset]), "shadow_adjustment", (gpointer)shadow_adj);
-            g_object_set_data(G_OBJECT(edit_adj[offset]), "shadow_bias", (gpointer)bias);
+            g_object_set_data(G_OBJECT(edit_adj[offset]), "shadow_bias", GINT_TO_POINTER(bias));
             if (callback != NULL)
                 g_signal_connect (G_OBJECT(edit_adj[offset]), "value-changed",
-                                  G_CALLBACK(callback), (gpointer)offset);
+                                  G_CALLBACK(callback), GINT_TO_POINTER(offset));
             g_signal_connect (G_OBJECT(edit_adj[offset]), "value-changed",
-                              G_CALLBACK (on_real_adj_changed), (gpointer)offset);
+                              G_CALLBACK (on_real_adj_changed), GINT_TO_POINTER(offset));
         }
         break;
       case PEPT_BkPt:
         place_spin(edit_adj[offset], tables[tab], x, y);
         g_signal_connect (G_OBJECT(edit_adj[offset]), "value-changed",
-                          G_CALLBACK (on_bkpt_changed), (gpointer)offset);
+                          G_CALLBACK (on_bkpt_changed), GINT_TO_POINTER(offset));
         break;
       case PEPT_Scal99:
         place_spin(edit_adj[offset], tables[tab], x, y);
         g_signal_connect (G_OBJECT(edit_adj[offset]), "value-changed",
-                          G_CALLBACK (on_scaling_changed), (gpointer)offset);
+                          G_CALLBACK (on_scaling_changed), GINT_TO_POINTER(offset));
         break;
       case PEPT_OnOff:
         place_switch(edit_adj[offset], tables[tab], x, y, PEPT_OnOff);
@@ -964,7 +964,7 @@ place_widget(int type, int tab, int x, int y, int offset)
       case PEPT_Curve:
         place_combo(edit_adj[offset], tables[tab], x, y, PEPT_Curve);
         g_signal_connect (G_OBJECT(edit_adj[offset]), "value-changed",
-                          G_CALLBACK (on_scaling_changed), (gpointer)offset);
+                          G_CALLBACK (on_scaling_changed), GINT_TO_POINTER(offset));
         break;
     }
 }
@@ -1080,7 +1080,7 @@ create_widgy_editor(const char *tag)
                               (GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
                               (GtkAttachOptions) (0), 0, 5);
         g_signal_connect(G_OBJECT(env_drawing_area[i]), "expose-event", G_CALLBACK(env_expose),
-                         (gpointer)i);
+                         GINT_TO_POINTER(i));
 
         scaling_drawing_area[i] = gtk_drawing_area_new();
         gtk_widget_set_size_request(scaling_drawing_area[i],
@@ -1091,7 +1091,7 @@ create_widgy_editor(const char *tag)
                               (GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
                               (GtkAttachOptions) (0), 0, 5);
         g_signal_connect(G_OBJECT(scaling_drawing_area[i]), "expose-event", G_CALLBACK(scaling_expose),
-                         (gpointer)i);
+                         GINT_TO_POINTER(i));
     }
     pitch_drawing_area = gtk_drawing_area_new();
     gtk_widget_set_size_request(pitch_drawing_area,

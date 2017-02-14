@@ -22,9 +22,8 @@
 #  include <config.h>
 #endif
 
-#define _BSD_SOURCE    1
-#define _SVID_SOURCE   1
-#define _ISOC99_SOURCE 1
+#define _DEFAULT_SOURCE 1
+#define _ISOC99_SOURCE  1
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -230,7 +229,7 @@ on_import_file_position_cancel( GtkWidget *widget, gpointer data )
 void
 on_export_file_type_press( GtkWidget *widget, gpointer data )
 {
-    int type = (int)data;
+    int type = GPOINTER_TO_INT(data);
     int start, end;
 
     GUIDB_MESSAGE(DB_GUI, ": on_export_file_type_press called with %d\n", type);
@@ -268,7 +267,7 @@ on_export_file_type_press( GtkWidget *widget, gpointer data )
 void
 on_export_file_position_change(GtkWidget *widget, gpointer data)
 {
-    int which = (int)data;
+    int which = GPOINTER_TO_INT(data);
     int type = GTK_TOGGLE_BUTTON (export_file_type_sysex)->active ? 0 : 1;
     int start = lrintf(GTK_ADJUSTMENT(export_file_start_spin_adj)->value);
     int end   = lrintf(GTK_ADJUSTMENT(export_file_end_spin_adj)->value);
@@ -422,7 +421,7 @@ on_volume_change( GtkWidget *widget, gpointer data )
 void
 on_polyphony_change(GtkWidget *widget, gpointer data)
 {
-    int which = (int)data;
+    int which = GPOINTER_TO_INT(data);
     int polyphony = lrintf(GTK_ADJUSTMENT(widget)->value);
     char buffer[4];
 
@@ -656,7 +655,7 @@ on_performance_spin_change(GtkWidget *widget, gpointer data)
     }
 
     GUIDB_MESSAGE(DB_GUI, " on_performance_spin_change: '%s' set to %ld\n",
-                  performance_spin_names[(int)data],
+                  performance_spin_names[GPOINTER_TO_INT(data)],
                   lrintf(GTK_ADJUSTMENT(widget)->value));
 
     send_performance();
@@ -671,10 +670,10 @@ on_performance_assign_toggled(GtkWidget *widget, gpointer data)
     }
 
     GUIDB_MESSAGE(DB_GUI, " on_performance_assign_toggled: '%s' now P%d A%d E%d\n",
-                  performance_assign_names[(int)data],
-                  GTK_TOGGLE_BUTTON (performance_assign_widgets[(int)data][0])->active ? 1 : 0,
-                  GTK_TOGGLE_BUTTON (performance_assign_widgets[(int)data][1])->active ? 1 : 0,
-                  GTK_TOGGLE_BUTTON (performance_assign_widgets[(int)data][2])->active ? 1 : 0);
+                  performance_assign_names[GPOINTER_TO_INT(data)],
+                  GTK_TOGGLE_BUTTON (performance_assign_widgets[GPOINTER_TO_INT(data)][0])->active ? 1 : 0,
+                  GTK_TOGGLE_BUTTON (performance_assign_widgets[GPOINTER_TO_INT(data)][1])->active ? 1 : 0,
+                  GTK_TOGGLE_BUTTON (performance_assign_widgets[GPOINTER_TO_INT(data)][2])->active ? 1 : 0);
 
     send_performance();
 }
@@ -684,7 +683,7 @@ on_test_note_slider_change(GtkWidget *widget, gpointer data)
 {
     unsigned char value = lrintf(GTK_ADJUSTMENT(widget)->value);
 
-    if ((int)data == 0) {  /* key */
+    if (GPOINTER_TO_INT(data) == 0) {  /* key */
 
         test_note_noteon_key = value;
         GUIDB_MESSAGE(DB_GUI, " on_test_note_slider_change: new test note key %d\n", test_note_noteon_key);
@@ -721,7 +720,7 @@ release_test_note(void)
 void
 on_test_note_button_press(GtkWidget *widget, gpointer data)
 {
-    int state = (int)data;
+    int state = GPOINTER_TO_INT(data);
 
     GUIDB_MESSAGE(DB_GUI, " on_test_note_button_press: button %s\n",
                   state ? "pressed" : "released")

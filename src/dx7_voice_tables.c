@@ -33,9 +33,8 @@
 #include <config.h>
 #endif
 
-#define _BSD_SOURCE    1
-#define _SVID_SOURCE   1
-#define _ISOC99_SOURCE 1
+#define _DEFAULT_SOURCE 1
+#define _ISOC99_SOURCE  1
 
 #include <math.h>
 
