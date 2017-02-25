@@ -175,7 +175,7 @@ osc_configure_handler(const char *path, const char *types, lo_arg **argv,
     } else if (!strcmp(key, "global_polyphony")) {
 #endif
 
-        update_global_polyphony(value);
+        TUIDB_MESSAGE(DB_OSC, " osc_configure_handler: received unsupported global polyphony limit of %s\n", value);
 
 #ifdef DSSI_PROJECT_DIRECTORY_KEY
     } else if (!strcmp(key, DSSI_PROJECT_DIRECTORY_KEY)) {

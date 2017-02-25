@@ -30,7 +30,6 @@
 #define DX7_DUMP_SIZE_VOICE_SINGLE   155+8
 #define DX7_DUMP_SIZE_VOICE_BULK    4096+8
 
-typedef struct _hexter_synth_t    hexter_synth_t;
 typedef struct _hexter_instance_t hexter_instance_t;
 
 typedef struct _dx7_patch_t       dx7_patch_t;
@@ -49,7 +48,7 @@ typedef float   dx7_sample_t;
 #endif /* HEXTER_USE_FLOATING_POINT */
 
 /* in hexter.c: */
-int   dssp_voicelist_mutex_lock(void);
-int   dssp_voicelist_mutex_unlock(void);
+int   dssp_voicelist_mutex_lock(hexter_instance_t *instance);
+int   dssp_voicelist_mutex_unlock(hexter_instance_t *instance);
 
 #endif /* _HEXTER_TYPES_H */

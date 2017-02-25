@@ -80,7 +80,6 @@ void update_performance_widgets(uint8_t *performance);
 void update_performance(const char *value);
 void update_monophonic(const char *value);
 void update_polyphony(const char *value);
-void update_global_polyphony(const char *value);
 void patches_clist_set_program(void);
 void rebuild_patches_clist(void);
 

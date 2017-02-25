@@ -77,11 +77,6 @@ setup_plugin(int index, const DSSI_Descriptor *d)
     d->LADSPA_Plugin->activate(handle[index]);
 
     /* configure */
-    err = d->configure(handle[index], DSSI_GLOBAL_CONFIGURE_PREFIX "polyphony", "32");
-    if (err) {
-        printf("configure(..., \"" DSSI_GLOBAL_CONFIGURE_PREFIX "polyphony\", \"32\") failed for %d\n", index);
-        exit(1);
-    }
     err = d->configure(handle[index], "polyphony", "32");
     if (err) {
         printf("configure(..., \"polyphony\", \"32\") failed for %d\n", index);

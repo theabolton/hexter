@@ -54,10 +54,12 @@ struct _hexter_instance_t
 
     float           sample_rate;
     float           nugget_rate;       /* nuggets per second */
+    unsigned long   nugget_remains;
     int32_t         ramp_duration;     /* frames per ramp for mods and volume */
     dx7_sample_t    dx7_eg_max_slew;   /* max op eg increment, in units per frame */
 
     /* voice tracking */
+    unsigned int    note_id;           /* incremented for every new note, used for voice-stealing prioritization */
     int             polyphony;         /* requested polyphony, must be <= HEXTER_MAX_POLYPHONY */
     int             monophonic;        /* true if operating in monophonic mode */
     int             max_voices;        /* current max polyphony, either requested polyphony above or 1 while in monophonic mode */
@@ -65,6 +67,11 @@ struct _hexter_instance_t
     dx7_voice_t    *mono_voice;
     unsigned char   last_key;          /* portamento starting key */
     signed char     held_keys[8];      /* for monophonic key tracking, an array of note-ons, most recently received first */
+
+    pthread_mutex_t voicelist_mutex;
+    int             voicelist_mutex_grab_failed;
+
+    dx7_voice_t    *voice[HEXTER_MAX_POLYPHONY];
 
     /* patches and edit buffer */
     pthread_mutex_t patches_mutex;
@@ -130,29 +137,9 @@ struct _hexter_instance_t
 #endif
 };
 
-/*
- * hexter_synth_t
- */
-struct _hexter_synth_t {
-    int                initialized;
-    int                instance_count;
-    hexter_instance_t *instances;
-
-    pthread_mutex_t    mutex;
-    int                mutex_grab_failed;
-
-    unsigned long      nugget_remains;
-
-    unsigned int       note_id;           /* incremented for every new note, used for voice-stealing prioritization */
-    int                global_polyphony;  /* must be <= HEXTER_MAX_POLYPHONY */
-
-    dx7_voice_t       *voice[HEXTER_MAX_POLYPHONY];
-};
-
 /* hexter_synth.c */
 void  dx7_voice_off(dx7_voice_t* voice);
 void  dx7_voice_start_voice(dx7_voice_t *voice);
-void  hexter_synth_all_voices_off(void);
 void  hexter_instance_all_voices_off(hexter_instance_t *instance);
 void  hexter_instance_note_off(hexter_instance_t *instance, unsigned char key,
                                unsigned char rvelocity);
@@ -183,12 +170,12 @@ char *hexter_instance_handle_monophonic(hexter_instance_t *instance,
                                         const char *value);
 char *hexter_instance_handle_polyphony(hexter_instance_t *instance,
                                        const char *value);
-char *hexter_synth_handle_global_polyphony(const char *value);
 char *hexter_instance_handle_performance(hexter_instance_t *instance,
                                          const char *value);
-void  hexter_synth_render_voices(unsigned long samples_done,
-                                 unsigned long sample_count,
-                                 int do_control_update);
+void  hexter_instance_render_voices(hexter_instance_t *instance,
+                                    unsigned long samples_done,
+                                    unsigned long sample_count,
+                                    int do_control_update);
 
 /* these come right out of alsa/asoundef.h */
 #define MIDI_CTL_MSB_MODWHEEL           0x01    /**< Modulation */

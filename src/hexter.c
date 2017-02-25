@@ -42,8 +42,6 @@
 #include "dx7_voice.h"
 #include "dx7_voice_data.h"
 
-hexter_synth_t hexter_synth;
-
 static LADSPA_Descriptor *hexter_LADSPA_descriptor = NULL;
 static DSSI_Descriptor   *hexter_DSSI_descriptor = NULL;
 
@@ -51,41 +49,40 @@ static void
 hexter_cleanup(LADSPA_Handle instance);
 
 static void
-hexter_run_multiple_synths(unsigned long instance_count, LADSPA_Handle *handles,
-                           unsigned long sample_count, snd_seq_event_t **events,
-                           unsigned long *event_counts);
+hexter_run_synth(LADSPA_Handle instance, unsigned long sample_count,
+                 snd_seq_event_t *events, unsigned long event_count);
 
 /* ---- mutual exclusion ---- */
 
 static inline int
-dssp_voicelist_mutex_trylock(void)
+dssp_voicelist_mutex_trylock(hexter_instance_t *instance)
 {
     int rc;
 
     /* Attempt the mutex lock */
-    rc = pthread_mutex_trylock(&hexter_synth.mutex);
+    rc = pthread_mutex_trylock(&instance->voicelist_mutex);
     if (rc) {
-        hexter_synth.mutex_grab_failed = 1;
+        instance->voicelist_mutex_grab_failed = 1;
         return rc;
     }
     /* Clean up if a previous mutex grab failed */
-    if (hexter_synth.mutex_grab_failed) {
-        hexter_synth_all_voices_off();
-        hexter_synth.mutex_grab_failed = 0;
+    if (instance->voicelist_mutex_grab_failed) {
+        hexter_instance_all_voices_off(instance);
+        instance->voicelist_mutex_grab_failed = 0;
     }
     return 0;
 }
 
 inline int
-dssp_voicelist_mutex_lock(void)
+dssp_voicelist_mutex_lock(hexter_instance_t *instance)
 {
-    return pthread_mutex_lock(&hexter_synth.mutex);
+    return pthread_mutex_lock(&instance->voicelist_mutex);
 }
 
 inline int
-dssp_voicelist_mutex_unlock(void)
+dssp_voicelist_mutex_unlock(hexter_instance_t *instance)
 {
-    return pthread_mutex_unlock(&hexter_synth.mutex);
+    return pthread_mutex_unlock(&instance->voicelist_mutex);
 }
 
 /* ---- LADSPA interface ---- */
@@ -102,38 +99,20 @@ hexter_instantiate(const LADSPA_Descriptor *descriptor,
     hexter_instance_t *instance;
     int i;
 
-    if (!hexter_synth.initialized) {
-
-        hexter_synth.instance_count = 0;
-        hexter_synth.instances = NULL;
-        hexter_synth.nugget_remains = 0;
-        hexter_synth.note_id = 0;
-        hexter_synth.global_polyphony = HEXTER_DEFAULT_POLYPHONY;
-
-        for (i = 0; i < HEXTER_MAX_POLYPHONY; i++) {
-            hexter_synth.voice[i] = dx7_voice_new();
-            if (!hexter_synth.voice[i]) {
-                DEBUG_MESSAGE(-1, " hexter_instantiate: out of memory!\n");
-                hexter_cleanup(NULL);
-                return NULL;
-            }
-        }
-
-        hexter_synth.initialized = 1;
-    }
-
     instance = (hexter_instance_t *)calloc(1, sizeof(hexter_instance_t));
     if (!instance) {
-        hexter_cleanup(NULL);
         return NULL;
     }
-    instance->next = hexter_synth.instances;
-    hexter_synth.instances = instance;
-    hexter_synth.instance_count++;
 
     /* do any per-instance one-time initialization here */
-    pthread_mutex_init(&instance->patches_mutex, NULL);
-
+    for (i = 0; i < HEXTER_MAX_POLYPHONY; i++) {
+        instance->voice[i] = dx7_voice_new();
+        if (!instance->voice[i]) {
+            DEBUG_MESSAGE(-1, " hexter_instantiate: out of memory!\n");
+            hexter_cleanup(instance);
+            return NULL;
+        }
+    }
     if (!(instance->patches = (dx7_patch_t *)malloc(128 * DX7_VOICE_SIZE_PACKED))) {
         DEBUG_MESSAGE(-1, " hexter_instantiate: out of memory!\n");
         hexter_cleanup(instance);
@@ -141,13 +120,18 @@ hexter_instantiate(const LADSPA_Descriptor *descriptor,
     }
 
     instance->sample_rate = (float)sample_rate;
+    instance->nugget_remains = 0;
     dx7_eg_init_constants(instance);  /* depends on sample rate */
 
+    instance->note_id = 0;
     instance->polyphony = HEXTER_DEFAULT_POLYPHONY;
     instance->monophonic = DSSP_MONO_MODE_OFF;
     instance->max_voices = instance->polyphony;
     instance->current_voices = 0;
     instance->last_key = 0;
+    pthread_mutex_init(&instance->voicelist_mutex, NULL);
+    instance->voicelist_mutex_grab_failed = 0;
+    pthread_mutex_init(&instance->patches_mutex, NULL);
     instance->pending_program_change = -1;
     instance->current_program = 0;
     instance->overlay_program = -1;
@@ -195,15 +179,11 @@ hexter_activate(LADSPA_Handle handle)
 
 /*
  * hexter_ladspa_run
- *
- * null implementation of LADSPA (*run)(): since we don't yet support
- * run_synth(), we just return immediately.
  */
 static void
 hexter_ladspa_run(LADSPA_Handle instance, unsigned long sample_count)
 {
-    /* hexter_run_synth(instance, sample_count, NULL, 0); */
-    return;
+    hexter_run_synth(instance, sample_count, NULL, 0);
 }
 
 // optional:
@@ -237,36 +217,16 @@ hexter_cleanup(LADSPA_Handle handle)
     int i;
 
     if (instance) {
-        hexter_instance_t *inst, *prev;
-
         hexter_deactivate(instance);
 
-        prev = NULL;
-        for (inst = hexter_synth.instances; inst; inst = inst->next) {
-            if (inst == instance) {
-                if (prev)
-                    prev->next = inst->next;
-                else
-                    hexter_synth.instances = inst->next;
-                break;
-            }
-            prev = inst;
-        }
-        hexter_synth.instance_count--;
-
         if (instance->patches) free(instance->patches);
-        free(instance);
-    }
-
-    if (!hexter_synth.instance_count && hexter_synth.initialized) {
         for (i = 0; i < HEXTER_MAX_POLYPHONY; i++) {
-            if (hexter_synth.voice[i]) {
-                free(hexter_synth.voice[i]);
-                hexter_synth.voice[i] = NULL;
+            if (instance->voice[i]) {
+                free(instance->voice[i]);
+                instance->voice[i] = NULL;
             }
         }
-
-        hexter_synth.initialized = 0;
+        free(instance);
     }
 }
 
@@ -310,7 +270,7 @@ hexter_configure(LADSPA_Handle handle, const char *key, const char *value)
     } else if (!strcmp(key, "global_polyphony")) {
 #endif
 
-        return hexter_synth_handle_global_polyphony(value);
+        DEBUG_MESSAGE(DB_DSSI, " -- global polyphony limiting is no longer supported --\n");
 
 #ifdef DSSI_PROJECT_DIRECTORY_KEY
     } else if (!strcmp(key, DSSI_PROJECT_DIRECTORY_KEY)) {
@@ -446,114 +406,86 @@ hexter_handle_event(hexter_instance_t *instance, snd_seq_event_t *event)
     }
 }
 
-// optional:
-//    void (*run_synth)(LADSPA_Handle    Instance,
-//                      unsigned long    SampleCount,
-//                      snd_seq_event_t *Events,
-//                      unsigned long    EventCount);
-//    void (*run_synth_adding)(LADSPA_Handle    Instance,
-//                             unsigned long    SampleCount,
-//                             snd_seq_event_t *Events,
-//                             unsigned long    EventCount);
-
-/*
- * hexter_run_multiple_synths
- *
- * implements DSSI (*run_multiple_synths)()
- */
 static void
-hexter_run_multiple_synths(unsigned long instance_count, LADSPA_Handle *handles,
-                           unsigned long sample_count, snd_seq_event_t **events,
-                           unsigned long *event_count)
+hexter_run_synth(LADSPA_Handle handle, unsigned long sample_count,
+                 snd_seq_event_t *events, unsigned long event_count)
 {
-    hexter_instance_t **instances = (hexter_instance_t **)handles;
+    hexter_instance_t *instance = (hexter_instance_t *)handle;
 
     unsigned long samples_done = 0;
-    unsigned long event_index[instance_count];
-    unsigned long this_pending_event_tick;
-    unsigned long next_pending_event_tick;
+    unsigned long event_index = 0;
     unsigned long burst_size;
-    int i;
 
-    /* attempt the mutex, return only silence if lock fails. */
-    if (dssp_voicelist_mutex_trylock()) {
-        for (i = 0; i < instance_count; i++) {
-            memset(instances[i]->output, 0, sizeof(LADSPA_Data) * sample_count);
-        }
-        return;
-    }
-
-    for (i = 0; i < instance_count; i++) {
-        event_index[i] = 0;
-
-        /* silence the buffer */
-        memset(instances[i]->output, 0, sizeof(LADSPA_Data) * sample_count);
+    /* silence the buffer */
+    memset(instance->output, 0, sizeof(LADSPA_Data) * sample_count);
 #if defined(DSSP_DEBUG) && (DSSP_DEBUG & DB_AUDIO)
-*instances[i]->output += 0.10f; /* add a 'buzz' to output so there's something audible even when quiescent */
+*instance->output += 0.10f; /* add a 'buzz' to output so there's something audible even when quiescent */
 #endif /* defined(DSSP_DEBUG) && (DSSP_DEBUG & DB_AUDIO) */
 
-        if (instances[i]->pending_program_change > -1)
-            hexter_handle_pending_program_change(instances[i]);
-    }
+    /* attempt the mutex, return only silence if lock fails. */
+    if (dssp_voicelist_mutex_trylock(instance))
+        return;
 
-    next_pending_event_tick = 0;
+    if (instance->pending_program_change > -1)
+        hexter_handle_pending_program_change(instance);
 
     while (samples_done < sample_count) {
 
-        if (!hexter_synth.nugget_remains)
-            hexter_synth.nugget_remains = HEXTER_NUGGET_SIZE;
+        if (!instance->nugget_remains)
+            instance->nugget_remains = HEXTER_NUGGET_SIZE;
 
         /* process any ready events */
-        while (next_pending_event_tick <= samples_done) {
-            this_pending_event_tick = next_pending_event_tick;
-            next_pending_event_tick = sample_count;
-            for (i = 0; i < instance_count; i++) {
-                while (event_index[i] < event_count[i]
-                       && events[i][event_index[i]].time.tick == this_pending_event_tick) {
-                     hexter_handle_event(instances[i], &events[i][event_index[i]]);
-                     event_index[i]++;
-                }
-                if (event_index[i] < event_count[i]
-                    && events[i][event_index[i]].time.tick < next_pending_event_tick) {
-                    next_pending_event_tick = events[i][event_index[i]].time.tick;
-                }
-            }
+        while (event_index < event_count
+               && samples_done == events[event_index].time.tick) {
+            hexter_handle_event(instance, &events[event_index]);
+            event_index++;
         }
 
         /* calculate the sample count (burst_size) for the next
-         * hexter_synth_render_voices() call to be the smallest of:
+         * hexter_instance_render_voices() call to be the smallest of:
          * - control calculation quantization size (HEXTER_NUGGET_SIZE,
          *     in samples)
          * - the number of samples remaining in an already-begun nugget
-         *     (hexter_synth.nugget_remains)
-         * - the number of samples left in this run
+         *     (instance->nugget_remains)
          * - the number of samples until the next event is ready
+         * - the number of samples left in this run
          */
         burst_size = HEXTER_NUGGET_SIZE;
-        if (hexter_synth.nugget_remains < burst_size) {
+        if (instance->nugget_remains < burst_size) {
             /* we're still in the middle of a nugget, so reduce the burst size
              * to end when the nugget ends */
-            burst_size = hexter_synth.nugget_remains;
+            burst_size = instance->nugget_remains;
+        }
+        if (event_index < event_count
+            && events[event_index].time.tick - samples_done < burst_size) {
+            /* reduce burst size to end when next event is ready */
+            burst_size = events[event_index].time.tick - samples_done;
         }
         if (sample_count - samples_done < burst_size) {
             /* reduce burst size to end at end of this run */
             burst_size = sample_count - samples_done;
-        } else if (next_pending_event_tick - samples_done < burst_size) {
-            /* reduce burst size to end when next event is ready */
-            burst_size = next_pending_event_tick - samples_done;
         }
 
         /* render the burst */
-        hexter_synth_render_voices(samples_done, burst_size,
-                                   (burst_size == hexter_synth.nugget_remains));
+        hexter_instance_render_voices(instance, samples_done, burst_size,
+                                      (burst_size == instance->nugget_remains));
         samples_done += burst_size;
-        hexter_synth.nugget_remains -= burst_size;
+        instance->nugget_remains -= burst_size;
     }
 
-    dssp_voicelist_mutex_unlock();
+    dssp_voicelist_mutex_unlock(instance);
 }
 
 // optional:
+//    void (*run_synth_adding)(LADSPA_Handle    Instance,
+//                             unsigned long    SampleCount,
+//                             snd_seq_event_t *Events,
+//                             unsigned long    EventCount);
+//    void (*run_multiple_synths)(unsigned long     InstanceCount,
+//                                LADSPA_Handle   **Instances,
+//                                unsigned long     SampleCount,
+//                                snd_seq_event_t **Events,
+//                                unsigned long    *EventCounts);
 //    void (*run_multiple_synths_adding)(unsigned long     InstanceCount,
 //                                       LADSPA_Handle   **Instances,
 //                                       unsigned long     SampleCount,
@@ -593,10 +525,6 @@ void _init()
     LADSPA_PortRangeHint *port_range_hints;
 
     DSSP_DEBUG_INIT("hexter.so");
-
-    hexter_synth.initialized = 0;
-    pthread_mutex_init(&hexter_synth.mutex, NULL);
-    hexter_synth.mutex_grab_failed = 0;
 
     dx7_voice_init_tables();
 
@@ -667,9 +595,9 @@ void _init()
         hexter_DSSI_descriptor->get_program = hexter_get_program;
         hexter_DSSI_descriptor->select_program = hexter_select_program;
         hexter_DSSI_descriptor->get_midi_controller_for_port = hexter_get_midi_controller;
-        hexter_DSSI_descriptor->run_synth = NULL;
+        hexter_DSSI_descriptor->run_synth = hexter_run_synth;
         hexter_DSSI_descriptor->run_synth_adding = NULL;
-        hexter_DSSI_descriptor->run_multiple_synths = hexter_run_multiple_synths;
+        hexter_DSSI_descriptor->run_multiple_synths = NULL;
         hexter_DSSI_descriptor->run_multiple_synths_adding = NULL;
     }
 }
