@@ -1,7 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -O2 -g -fomit-frame-pointer -funroll-loops -finline-functions -ffast-math -Winline \
-    -finline-limit=5000 --param large-function-growth=4900 --param inline-unit-growth=900 \
-    -I../src
+CFLAGS=-Wall -O2 -g -fomit-frame-pointer -funroll-loops -finline-functions -ffast-math -I../src
 
 OS=$(shell uname)
 ifeq ($(OS),Darwin)

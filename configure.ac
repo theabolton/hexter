@@ -101,13 +101,7 @@ if test "x$GCC" = "xyes"; then
   esac
   case " $CFLAGS " in
   *[\ \	]-ffast-math[\ \	]*) ;;
-  *)  CFLAGS="$CFLAGS -fomit-frame-pointer -funroll-loops -finline-functions -ffast-math -Winline"
-      # add '-finline-limit=...' only for GCC 3.x and 4.x:
-      case `$CC -dumpversion 2>/dev/null` in
-      # these --params are also in 3.4.6, but not in 3.3.6
-      4.*) CFLAGS="$CFLAGS -finline-limit=5000 --param large-function-growth=4900 --param inline-unit-growth=900" ;;
-      3.*) CFLAGS="$CFLAGS -finline-limit=5000" ;;
-      esac ;;
+  *)  CFLAGS="$CFLAGS -fomit-frame-pointer -funroll-loops -finline-functions -ffast-math" ;;
   esac
 fi
 changequote([,])dnl
