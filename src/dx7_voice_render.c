@@ -30,6 +30,7 @@
 #define _DEFAULT_SOURCE 1
 #define _ISOC99_SOURCE  1
 
+#include <stdint.h>
 #include <math.h>
 
 #include "hexter_types.h"
@@ -246,10 +247,17 @@ dx7_voice_check_for_dead(dx7_voice_t *voice)
     return 1;
 }
 
+/* Test for bitwise equality of two floating-point numbers (single or double
+ * precision). This little dance is needed on some platforms to avoid
+ * comparisons between e.g. 64-bit double precision with 80-bit extended
+ * precision values. Generally, testing for exact equality in floating point is
+ * a bad idea, but here we're only concerned about whether a parameter changed
+ * from it's previous value, not with the value itself.
+ */
 static inline int
 float_equality(float a, float b)
 {
-    union { float f; unsigned long l; } ua, ub;
+    union { float f; uint32_t l; } ua, ub;
     ua.f = a;
     ub.f = b;
     return ua.l == ub.l;
@@ -258,7 +266,7 @@ float_equality(float a, float b)
 static inline int
 double_equality(double a, double b)
 {
-    union { double d; unsigned long l[2]; } ua, ub;
+    union { double d; uint32_t l[2]; } ua, ub;
     ua.d = a;
     ub.d = b;
     return ua.l[0] == ub.l[0] && ua.l[1] == ub.l[1];
