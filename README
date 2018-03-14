@@ -493,20 +493,20 @@ test results say that floating-point is faster, then you can
 configure hexter to use floating-point with the
 '--enable-floating-point' configure option.
 
-Here are some test results from a few machines. Lower percentages
-indicate the faster mode.
+Here are some test results from a few machines. Percentages indicate
+the speed relative to the faster mode.
 
 Processor                              Fixed Point  Floating Point
 -------------------------------------  -----------  --------------
-PowerPC G4 800MHz                         49.5%        100.0%
-PowerPC G4 1.07GHz                        49.8%        100.0%
-Pentium III (Coppermine) 933MHz          100.0%         95.2%
-Intel Core Duo 1.83GHz, OS X 10.4.9      100.0%         92.9%
-Intel Core 2 Duo 2.4GHz, Linux 3.2       100.0%         96.1% *
-Intel Core 2 Duo 2.4GHz, OS X 10.4.11    100.0%         91.4% *
-Intel Core 2 Duo 2.4GHz, OS X 10.6.8      61.5%        100.0% *
-Intel Core 2 Duo 2.5GHz, OS X 10.6.7      62.0%        100.0%
-Intel Core i7, OS X 10.7                  52.0%        100.0%
+PowerPC G4 800MHz                        faster          49.5%
+PowerPC G4 1.07GHz                       faster          49.8%
+Pentium III (Coppermine) 933MHz           95.2%         faster
+Intel Core Duo 1.83GHz, OS X 10.4.9       92.9%         faster
+Intel Core 2 Duo 2.4GHz, Linux 3.2        96.1%         faster *
+Intel Core 2 Duo 2.4GHz, OS X 10.4.11     91.4%         faster *
+Intel Core 2 Duo 2.4GHz, OS X 10.6.8     faster          61.5% *
+Intel Core 2 Duo 2.5GHz, OS X 10.6.7     faster          62.0%
+Intel Core i7, OS X 10.7                 faster          52.0%
 
 * These three all come from the same machine!
 

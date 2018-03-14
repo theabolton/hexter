@@ -178,14 +178,12 @@ main(int argc, char **argv)
 
     if (usage[FIX] > usage[FLOAT]) {
         printf("On this system, with this compilation, it seems that floating point is faster:\n");
-        printf("                 seconds     ratio\n");
-        printf("Fixed point:     %7f   %5.1f%%\n", usage[FIX], 100.0);
-        printf("Floating point:  %7f   %5.1f%%\n", usage[FLOAT], 100.0 * usage[FLOAT] / usage[FIX]);
+        printf("Fixed point:     %7f seconds  -> %.1f%% as fast as floating point\n", usage[FIX], 100.0 * usage[FLOAT] / usage[FIX]);
+        printf("Floating point:  %7f seconds  -> faster mode\n", usage[FLOAT]);
     } else {
         printf("On this system, with this compilation, it seems that fixed point is faster:\n");
-        printf("                 seconds     ratio\n");
-        printf("Fixed point:     %7f   %5.1f%%\n", usage[FIX], 100.0 * usage[FIX] / usage[FLOAT]);
-        printf("Floating point:  %7f   %5.1f%%\n", usage[FLOAT], 100.0);
+        printf("Fixed point:     %7f seconds  -> faster mode\n", usage[FIX]);
+        printf("Floating point:  %7f seconds  -> %.1f%% as fast as fixed point\n", usage[FLOAT], 100.0 * usage[FIX] / usage[FLOAT]);
     }
 
     return 0;
