@@ -62,7 +62,7 @@ static char *tabs[TABLE_COUNT] = {
 #define TG  TABLE_GLOBAL
 
 static struct _labels {
-    char tab;
+    signed char tab;
     char x, y;
     char width;
     const char *text;
@@ -108,7 +108,7 @@ static struct _labels {
 };
 
 static struct _op_labels {
-    char x, y;
+    signed char x, y;
     char width;
     const char *text;
 } op_labels[] = {
@@ -144,7 +144,7 @@ static struct _op_labels {
 };
 
 static struct _parameters {
-    char type;
+    signed char type;
     char tab;
     char x, y;
     int  offset;
@@ -186,7 +186,7 @@ static struct _parameters {
 #undef TG
 
 static struct _op_parameters {
-    char type;
+    signed char type;
     char x, y;
     int  offset;
 } op_parameters[] = {
