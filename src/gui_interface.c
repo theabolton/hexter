@@ -39,8 +39,7 @@ GtkObject *test_note_key_adj;
 GtkObject *test_note_velocity_adj;
 GtkObject *tuning_adj;
 GtkObject *volume_adj;
-GtkObject *polyphony_instance_adj;
-GtkObject *polyphony_global_adj;
+GtkObject *polyphony_adj;
 GtkWidget *monophonic_option_menu;
 GtkWidget *compat059_button;
 #ifdef HEXTER_DEBUG_CONTROL
@@ -269,9 +268,7 @@ create_main_window (const char *tag)
     GtkWidget *mono_mode_once;
     GtkWidget *mono_mode_both;
     GtkWidget *optionmenu5_menu;
-    GtkWidget *polyphony_instance;
-    GtkWidget *polyphony_global;
-    GtkWidget *label42;
+    GtkWidget *polyphony;
     GtkWidget *label43;
     GtkWidget *label43a;
     GtkWidget *volume_label;
@@ -458,7 +455,7 @@ create_main_window (const char *tag)
     gtk_widget_show (frame14);
     gtk_box_pack_start (GTK_BOX (vbox2), frame14, TRUE, TRUE, 0);
 
-    table16 = gtk_table_new (2, 6, FALSE);
+    table16 = gtk_table_new (2, 5, FALSE);
     gtk_widget_ref (table16);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "table16", table16,
                               (GtkDestroyNotify) gtk_widget_unref);
@@ -519,7 +516,7 @@ create_main_window (const char *tag)
     gtk_object_set_data_full (GTK_OBJECT (main_window), "monophonic_option_menu", monophonic_option_menu,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_widget_show (monophonic_option_menu);
-    gtk_table_attach (GTK_TABLE (table16), monophonic_option_menu, 1, 2, 4, 5,
+    gtk_table_attach (GTK_TABLE (table16), monophonic_option_menu, 1, 2, 3, 4,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
     optionmenu5_menu = gtk_menu_new ();
@@ -537,17 +534,17 @@ create_main_window (const char *tag)
     gtk_menu_append (GTK_MENU (optionmenu5_menu), mono_mode_both);
     gtk_option_menu_set_menu (GTK_OPTION_MENU (monophonic_option_menu), optionmenu5_menu);
 
-    polyphony_instance_adj = gtk_adjustment_new (HEXTER_DEFAULT_POLYPHONY, 1, HEXTER_MAX_POLYPHONY, 1, 10, 0);
-    polyphony_instance = gtk_spin_button_new (GTK_ADJUSTMENT (polyphony_instance_adj), 1, 0);
-    gtk_widget_ref (polyphony_instance);
-    gtk_object_set_data_full (GTK_OBJECT (main_window), "polyphony_instance", polyphony_instance,
+    polyphony_adj = gtk_adjustment_new (HEXTER_DEFAULT_POLYPHONY, 1, HEXTER_MAX_POLYPHONY, 1, 10, 0);
+    polyphony = gtk_spin_button_new (GTK_ADJUSTMENT (polyphony_adj), 1, 0);
+    gtk_widget_ref (polyphony);
+    gtk_object_set_data_full (GTK_OBJECT (main_window), "polyphony", polyphony,
                               (GtkDestroyNotify) gtk_widget_unref);
-    gtk_widget_show (polyphony_instance);
-    gtk_table_attach (GTK_TABLE (table16), polyphony_instance, 1, 2, 2, 3,
+    gtk_widget_show (polyphony);
+    gtk_table_attach (GTK_TABLE (table16), polyphony, 1, 2, 2, 3,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
 
-    label43 = gtk_label_new ("polyphony (instance)");
+    label43 = gtk_label_new ("polyphony");
     gtk_widget_ref (label43);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "label43", label43,
                               (GtkDestroyNotify) gtk_widget_unref);
@@ -558,33 +555,12 @@ create_main_window (const char *tag)
     gtk_misc_set_alignment (GTK_MISC (label43), 0, 0.5);
     gtk_misc_set_padding (GTK_MISC (label43), 2, 0);
 
-    polyphony_global_adj = gtk_adjustment_new (HEXTER_DEFAULT_POLYPHONY, 1, HEXTER_MAX_POLYPHONY, 1, 10, 0);
-    polyphony_global = gtk_spin_button_new (GTK_ADJUSTMENT (polyphony_global_adj), 1, 0);
-    gtk_widget_ref (polyphony_global);
-    gtk_object_set_data_full (GTK_OBJECT (main_window), "polyphony_global", polyphony_global,
-                              (GtkDestroyNotify) gtk_widget_unref);
-    gtk_widget_show (polyphony_global);
-    gtk_table_attach (GTK_TABLE (table16), polyphony_global, 1, 2, 3, 4,
-                      (GtkAttachOptions) (GTK_FILL),
-                      (GtkAttachOptions) (0), 0, 0);
-
-    label42 = gtk_label_new ("polyphony (global)");
-    gtk_widget_ref (label42);
-    gtk_object_set_data_full (GTK_OBJECT (main_window), "label42", label42,
-                              (GtkDestroyNotify) gtk_widget_unref);
-    gtk_widget_show (label42);
-    gtk_table_attach (GTK_TABLE (table16), label42, 0, 1, 3, 4,
-                      (GtkAttachOptions) (GTK_FILL),
-                      (GtkAttachOptions) (0), 0, 0);
-    gtk_misc_set_alignment (GTK_MISC (label42), 0, 0.5);
-    gtk_misc_set_padding (GTK_MISC (label42), 2, 0);
-
     label44 = gtk_label_new ("monophonic mode");
     gtk_widget_ref (label44);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "label44", label44,
                               (GtkDestroyNotify) gtk_widget_unref);
     gtk_widget_show (label44);
-    gtk_table_attach (GTK_TABLE (table16), label44, 0, 1, 4, 5,
+    gtk_table_attach (GTK_TABLE (table16), label44, 0, 1, 3, 4,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
     gtk_misc_set_alignment (GTK_MISC (label44), 0, 0.5);
@@ -593,7 +569,7 @@ create_main_window (const char *tag)
     label44 = gtk_label_new ("disable LFO/Mod/Perf\n"
                              "(0.5.x compatibility)");
     gtk_widget_show (label44);
-    gtk_table_attach (GTK_TABLE (table16), label44, 0, 1, 5, 6,
+    gtk_table_attach (GTK_TABLE (table16), label44, 0, 1, 4, 5,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
     gtk_misc_set_alignment (GTK_MISC (label44), 0, 0.5);
@@ -602,7 +578,7 @@ create_main_window (const char *tag)
     compat059_button = gtk_check_button_new();
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(compat059_button), 0);
     gtk_widget_show (compat059_button);
-    gtk_table_attach (GTK_TABLE (table16), compat059_button, 1, 2, 5, 6,
+    gtk_table_attach (GTK_TABLE (table16), compat059_button, 1, 2, 4, 5,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
 
@@ -614,7 +590,7 @@ create_main_window (const char *tag)
         gtk_scale_set_digits (GTK_SCALE (w), 0);
         gtk_range_set_update_policy (GTK_RANGE (w), GTK_UPDATE_DELAYED);
         gtk_widget_show(w);
-        gtk_table_attach (GTK_TABLE(table16), w, 0, 2, 6, 7,
+        gtk_table_attach (GTK_TABLE(table16), w, 0, 2, 5, 6,
                           (GtkAttachOptions) (GTK_FILL),
                           (GtkAttachOptions) (0), 0, 0);
         g_signal_connect(G_OBJECT(test_adj), "value-changed", G_CALLBACK(on_test_changed), NULL);
@@ -857,12 +833,9 @@ create_main_window (const char *tag)
     gtk_signal_connect (GTK_OBJECT (volume_adj), "value_changed",
                         GTK_SIGNAL_FUNC(on_volume_change),
                         NULL);
-    gtk_signal_connect (GTK_OBJECT (polyphony_instance_adj), "value_changed",
+    gtk_signal_connect (GTK_OBJECT (polyphony_adj), "value_changed",
                         GTK_SIGNAL_FUNC(on_polyphony_change),
-                        (gpointer)0);
-    gtk_signal_connect (GTK_OBJECT (polyphony_global_adj), "value_changed",
-                        GTK_SIGNAL_FUNC(on_polyphony_change),
-                        (gpointer)1);
+                        NULL);
     gtk_signal_connect (GTK_OBJECT (mono_mode_off), "activate",
                         GTK_SIGNAL_FUNC (on_mono_mode_activate),
                         (gpointer)"off");

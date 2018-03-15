@@ -36,8 +36,6 @@
 #include "dx7_voice_data.h"
 #include "dx7_voice.h"
 
-extern hexter_synth_t hexter_synth;
-
 /*
  * dx7_voice_off
  *
@@ -99,27 +97,6 @@ hexter_instance_remove_held_key(hexter_instance_t *instance, unsigned char key)
 }
 
 /*
- * hexter_synth_all_voices_off
- *
- * stop processing all notes of all instances immediately
- */
-void
-hexter_synth_all_voices_off(void)
-{
-    int i;
-    dx7_voice_t *voice;
-
-    for (i = 0; i < hexter_synth.global_polyphony; i++) {
-        voice = hexter_synth.voice[i];
-        if (_PLAYING(voice)) {
-            if (voice->instance->held_keys[0] != -1)
-                hexter_instance_clear_held_keys(voice->instance);
-            dx7_voice_off(voice);
-        }
-    }
-}
-
-/*
  * hexter_instance_all_voices_off
  *
  * stop processing all notes within instance immediately
@@ -130,9 +107,9 @@ hexter_instance_all_voices_off(hexter_instance_t *instance)
     int i;
     dx7_voice_t *voice;
 
-    for (i = 0; i < hexter_synth.global_polyphony; i++) {
-        voice = hexter_synth.voice[i];
-        if (voice->instance == instance && _PLAYING(voice)) {
+    for (i = 0; i < instance->polyphony; i++) {
+        voice = instance->voice[i];
+        if (_PLAYING(voice)) {
             dx7_voice_off(voice);
         }
     }
@@ -153,11 +130,10 @@ hexter_instance_note_off(hexter_instance_t *instance, unsigned char key,
 
     hexter_instance_remove_held_key(instance, key);
 
-    for (i = 0; i < hexter_synth.global_polyphony; i++) {
-        voice = hexter_synth.voice[i];
-        if (voice->instance == instance &&
-            (instance->monophonic ? (_PLAYING(voice)) :
-                                    (_ON(voice) && (voice->key == key)))) {
+    for (i = 0; i < instance->max_voices; i++) {
+        voice = instance->voice[i];
+        if (instance->monophonic ? (_PLAYING(voice)) :
+                                   (_ON(voice) && (voice->key == key))) {
             DEBUG_MESSAGE(DB_NOTE, " hexter_instance_note_off: key %d rvel %d voice %d note id %d\n", key, rvelocity, i, voice->note_id);
             dx7_voice_note_off(instance, voice, key, rvelocity);
         } /* if voice on */
@@ -177,10 +153,9 @@ hexter_instance_all_notes_off(hexter_instance_t* instance)
 
     /* reset the sustain controller */
     instance->cc[MIDI_CTL_SUSTAIN] = 0;
-    for (i = 0; i < hexter_synth.global_polyphony; i++) {
-        voice = hexter_synth.voice[i];
-        if (voice->instance == instance &&
-            (_ON(voice) || _SUSTAINED(voice))) {
+    for (i = 0; i < instance->max_voices; i++) {
+        voice = instance->voice[i];
+        if (_ON(voice) || _SUSTAINED(voice)) {
             dx7_voice_release_note(instance, voice);
         }
     }
@@ -201,18 +176,12 @@ hexter_synth_free_voice_by_kill(hexter_instance_t *instance)
     dx7_voice_t *voice;
     int best_voice_index = -1;
 
-    for (i = 0; i < hexter_synth.global_polyphony; i++) {
-        voice = hexter_synth.voice[i];
+    for (i = 0; i < instance->max_voices; i++) {
+        voice = instance->voice[i];
 
-        if (instance) {
-            /* only look at playing voices of this instance */
-            if (_AVAILABLE(voice) || voice->instance != instance)
-                continue;
-        } else {
-            /* safeguard against an available voice. */
-            if (_AVAILABLE(voice))
-                return voice;
-        }
+        /* safeguard against an available voice. */
+        if (_AVAILABLE(voice))
+            return voice;
 
         /* Determine, how 'important' a voice is.
          * Start with an arbitrary number */
@@ -238,7 +207,7 @@ hexter_synth_free_voice_by_kill(hexter_instance_t *instance)
          * belonging to that very same chord.  So subtract the age of the voice
          * from the priority - an older voice is just a little bit less
          * important than a younger voice. */
-        this_voice_prio -= (hexter_synth.note_id - voice->note_id);
+        this_voice_prio -= (instance->note_id - voice->note_id);
 
         /* -FIX- not yet implemented:
          * /= take a rough estimate of loudness into account. Louder voices are more important. =/
@@ -256,7 +225,7 @@ hexter_synth_free_voice_by_kill(hexter_instance_t *instance)
     if (best_voice_index < 0)
         return NULL;
 
-    voice = hexter_synth.voice[best_voice_index];
+    voice = instance->voice[best_voice_index];
     DEBUG_MESSAGE(DB_NOTE, " hexter_synth_free_voice_by_kill: no available voices, killing voice %d note id %d\n", best_voice_index, voice->note_id);
     dx7_voice_off(voice);
     return voice;
@@ -274,10 +243,9 @@ hexter_synth_alloc_voice(hexter_instance_t* instance, unsigned char key)
     /* If there is another voice on the same key, advance it
      * to the release phase. Note that a DX7 doesn't do this,
      * but we do it here to keep our CPU usage low. */
-    for (i = 0; i < hexter_synth.global_polyphony; i++) {
-        voice = hexter_synth.voice[i];
-        if (voice->instance == instance && voice->key == key &&
-            (_ON(voice) || _SUSTAINED(voice))) {
+    for (i = 0; i < instance->max_voices; i++) {
+        voice = instance->voice[i];
+        if (voice->key == key && (_ON(voice) || _SUSTAINED(voice))) {
             dx7_voice_release_note(instance, voice);
         }
     }
@@ -286,16 +254,16 @@ hexter_synth_alloc_voice(hexter_instance_t* instance, unsigned char key)
 
     if (instance->current_voices < instance->max_voices) {
         /* check if there's an available voice */
-        for (i = 0; i < hexter_synth.global_polyphony; i++) {
-            if (_AVAILABLE(hexter_synth.voice[i])) {
-                voice = hexter_synth.voice[i];
+        for (i = 0; i < instance->max_voices; i++) {
+            if (_AVAILABLE(instance->voice[i])) {
+                voice = instance->voice[i];
                 break;
             }
         }
 
         /* if not, then stop a running voice. */
         if (voice == NULL) {
-            voice = hexter_synth_free_voice_by_kill(NULL);
+            voice = hexter_synth_free_voice_by_kill(instance);
         }
     } else {  /* at instance polyphony limit */
         voice = hexter_synth_free_voice_by_kill(instance);
@@ -343,7 +311,7 @@ hexter_instance_note_on(hexter_instance_t *instance, unsigned char key,
     }
 
     voice->instance = instance;
-    voice->note_id = hexter_synth.note_id++;
+    voice->note_id = instance->note_id++;
 
     dx7_voice_note_on(instance, voice, key, velocity);
 }
@@ -365,9 +333,9 @@ hexter_instance_key_pressure(hexter_instance_t *instance, unsigned char key,
     instance->key_pressure[key] = pressure;
 
     /* flag any playing voices as needing updating */
-    for (i = 0; i < hexter_synth.global_polyphony; i++) {
-        voice = hexter_synth.voice[i];
-        if (voice->instance == instance && _PLAYING(voice) && voice->key == key) {
+    for (i = 0; i < instance->max_voices; i++) {
+        voice = instance->voice[i];
+        if (_PLAYING(voice) && voice->key == key) {
             voice->mods_serial--;
         }
     }
@@ -385,9 +353,9 @@ hexter_instance_damp_voices(hexter_instance_t* instance)
     int i;
     dx7_voice_t* voice;
 
-    for (i = 0; i < hexter_synth.global_polyphony; i++) {
-        voice = hexter_synth.voice[i];
-        if (voice->instance == instance && _SUSTAINED(voice)) {
+    for (i = 0; i < instance->max_voices; i++) {
+        voice = instance->voice[i];
+        if (_SUSTAINED(voice)) {
             /* this assumes the caller has cleared the sustain controller */
             dx7_voice_release_note(instance, voice);
         }
@@ -518,9 +486,9 @@ hexter_instance_update_op_param(hexter_instance_t *instance, int opnum,
     }
 
     /* check if any playing voices need updating */
-    for (i = 0; i < hexter_synth.global_polyphony; i++) {
-        voice = hexter_synth.voice[i];
-        if (voice->instance == instance && _PLAYING(voice)) {
+    for (i = 0; i < instance->max_voices; i++) {
+        voice = instance->voice[i];
+        if (_PLAYING(voice)) {
             dx7_op_t *op = &voice->op[opnum];
 
             /* set values */
@@ -1027,13 +995,13 @@ hexter_instance_handle_monophonic(hexter_instance_t *instance, const char *value
 
         if (!instance->monophonic) {
 
-            dssp_voicelist_mutex_lock();
+            dssp_voicelist_mutex_lock(instance);
 
             hexter_instance_all_voices_off(instance);
             instance->max_voices = 1;
             instance->mono_voice = NULL;
             hexter_instance_clear_held_keys(instance);
-            dssp_voicelist_mutex_unlock();
+            dssp_voicelist_mutex_unlock(instance);
         }
         instance->monophonic = mode;
     }
@@ -1059,89 +1027,50 @@ hexter_instance_handle_polyphony(hexter_instance_t *instance, const char *value)
 
     if (!instance->monophonic) {
 
-        dssp_voicelist_mutex_lock();
+        dssp_voicelist_mutex_lock(instance);
 
         instance->max_voices = polyphony;
 
         /* turn off any voices above the new limit */
-        for (i = 0; instance->current_voices > instance->max_voices &&
-                    i < hexter_synth.global_polyphony; i++) {
-            voice = hexter_synth.voice[i];
-            if (voice->instance == instance && _PLAYING(voice)) {
-                if (voice->instance->held_keys[0] != -1)
-                    hexter_instance_clear_held_keys(voice->instance);
+        for (i = polyphony; i < HEXTER_MAX_POLYPHONY; i++) {
+            voice = instance->voice[i];
+            if (_PLAYING(voice)) {
+                if (instance->held_keys[0] != -1)
+                    hexter_instance_clear_held_keys(instance);
                 dx7_voice_off(voice);
             }
         }
 
-        dssp_voicelist_mutex_unlock();
+        dssp_voicelist_mutex_unlock(instance);
     }
 
     return NULL; /* success */
 }
 
 /*
- * hexter_synth_handle_global_polyphony
- */
-char *
-hexter_synth_handle_global_polyphony(const char *value)
-{
-    int polyphony = atoi(value);
-    int i;
-    dx7_voice_t *voice;
-
-    if (polyphony < 1 || polyphony > HEXTER_MAX_POLYPHONY) {
-        return dssp_error_message("error: polyphony value out of range");
-    }
-
-    dssp_voicelist_mutex_lock();
-
-    /* set the new limit */
-    hexter_synth.global_polyphony = polyphony;
-
-    /* turn off any voices above the new limit */
-    for (i = polyphony; i < HEXTER_MAX_POLYPHONY; i++) {
-        voice = hexter_synth.voice[i];
-        if (_PLAYING(voice)) {
-            if (voice->instance->held_keys[0] != -1)
-                hexter_instance_clear_held_keys(voice->instance);
-            dx7_voice_off(voice);
-        }
-    }
-
-    dssp_voicelist_mutex_unlock();
-
-    return NULL; /* success */
-}
-
-/*
- * hexter_synth_render_voices
+ * hexter_instance_render_voices
  */
 void
-hexter_synth_render_voices(unsigned long samples_done,
-                           unsigned long sample_count, int do_control_update)
+hexter_instance_render_voices(hexter_instance_t *instance, unsigned long samples_done,
+                              unsigned long sample_count, int do_control_update)
 {
-    hexter_instance_t *instance;
     unsigned long i;
     dx7_voice_t* voice;
 
-    /* update each LFO */
-    for (instance = hexter_synth.instances; instance;
-             instance = instance->next) {
-        dx7_lfo_update(instance, sample_count);
-    }
+    /* update the LFO */
+    dx7_lfo_update(instance, sample_count);
 
     /* render each active voice */
-    for (i = 0; i < hexter_synth.global_polyphony; i++) {
-        voice = hexter_synth.voice[i];
+    for (i = 0; i < instance->max_voices; i++) {
+        voice = instance->voice[i];
 
         if (_PLAYING(voice)) {
-            if (voice->mods_serial != voice->instance->mods_serial) {
-                dx7_voice_update_mod_depths(voice->instance, voice);
-                voice->mods_serial = voice->instance->mods_serial;
+            if (voice->mods_serial != instance->mods_serial) {
+                dx7_voice_update_mod_depths(instance, voice);
+                voice->mods_serial = instance->mods_serial;
             }
-            dx7_voice_render(voice->instance, voice,
-                             voice->instance->output + samples_done,
+            dx7_voice_render(instance, voice,
+                             instance->output + samples_done,
                              sample_count, do_control_update);
         }
     }

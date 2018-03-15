@@ -421,7 +421,6 @@ on_volume_change( GtkWidget *widget, gpointer data )
 void
 on_polyphony_change(GtkWidget *widget, gpointer data)
 {
-    int which = GPOINTER_TO_INT(data);
     int polyphony = lrintf(GTK_ADJUSTMENT(widget)->value);
     char buffer[4];
 
@@ -430,20 +429,10 @@ on_polyphony_change(GtkWidget *widget, gpointer data)
         return;
     }
 
-    GUIDB_MESSAGE(DB_GUI, " on_polyphony_change: %s polyphony set to %d\n", (which ? "instance" : "global"), polyphony);
+    GUIDB_MESSAGE(DB_GUI, " on_polyphony_change: polyphony set to %d\n", polyphony);
 
     snprintf(buffer, 4, "%d", polyphony);
-    if (which == 0) { /* instance */
-        lo_send(osc_host_address, osc_configure_path, "ss", "polyphony", buffer);
-    } else { /* global */
-#ifdef DSSI_GLOBAL_CONFIGURE_PREFIX
-        lo_send(osc_host_address, osc_configure_path, "ss",
-                DSSI_GLOBAL_CONFIGURE_PREFIX "polyphony", buffer);
-#else
-        lo_send(osc_host_address, osc_configure_path, "ss", "global_polyphony",
-                buffer);
-#endif
-    }
+    lo_send(osc_host_address, osc_configure_path, "ss", "polyphony", buffer);
 }
 
 void
@@ -983,26 +972,8 @@ update_polyphony(const char *value)
 
         internal_gui_update_only = 1;
 
-        GTK_ADJUSTMENT(polyphony_instance_adj)->value = (float)poly;
-        gtk_signal_emit_by_name (GTK_OBJECT (polyphony_instance_adj), "value_changed");  /* causes call to on_voice_slider_change callback */
-
-        internal_gui_update_only = 0;
-    }
-}
-
-void
-update_global_polyphony(const char *value)
-{
-    int poly = atoi(value);
-
-    GUIDB_MESSAGE(DB_OSC, ": update_global_polyphony called with '%s'\n", value);
-
-    if (poly > 0 && poly < HEXTER_MAX_POLYPHONY) {
-
-        internal_gui_update_only = 1;
-
-        GTK_ADJUSTMENT(polyphony_global_adj)->value = (float)poly;
-        gtk_signal_emit_by_name (GTK_OBJECT (polyphony_global_adj), "value_changed");  /* causes call to on_voice_slider_change callback */
+        GTK_ADJUSTMENT(polyphony_adj)->value = (float)poly;
+        gtk_signal_emit_by_name (GTK_OBJECT (polyphony_adj), "value_changed");  /* causes call to on_voice_slider_change callback */
 
         internal_gui_update_only = 0;
     }

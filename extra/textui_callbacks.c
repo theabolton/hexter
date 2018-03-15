@@ -43,8 +43,7 @@ static unsigned char test_note_noteon_key = 60;
 static unsigned char test_note_noteoff_key;
 static unsigned char test_note_velocity = 84;
 static int           monophonic_mode = 0;
-static int           polyphony_instance = HEXTER_DEFAULT_POLYPHONY;
-static int           polyphony_global = HEXTER_DEFAULT_POLYPHONY;
+static int           polyphony = HEXTER_DEFAULT_POLYPHONY;
 
 static char *monophonic_modes[] = {
     "off", "on", "once", "both", NULL
@@ -61,7 +60,7 @@ command_status(char *args)
     printf("test note: key %d, velocity %d, currently %s\n", test_note_noteon_key,
            test_note_velocity, test_note_state ? "on" : "off");
     printf("monophonic mode: %s\n", monophonic_modes[monophonic_mode]);
-    printf("polyphony: instance %d, global %d\n", polyphony_instance, polyphony_global);
+    printf("polyphony: %d\n", polyphony);
     printf("current program: %d\n", current_program);
 }
 
@@ -173,36 +172,10 @@ command_poly(char *args)
     poly = atoi(args);
 
     if (poly > 0 && poly < HEXTER_MAX_POLYPHONY) {
-        polyphony_instance = poly;
+        polyphony = poly;
 
         snprintf(buffer, 4, "%d", poly);
         lo_send(osc_host_address, osc_configure_path, "ss", "polyphony", buffer);
-    }
-}
-
-void
-command_gpoly(char *args)
-{
-    int poly;
-    char buffer[4];
-
-    if (!args || !*args) {
-        printf("usage: 'gpoly <voice count>'\n");
-        return;
-    }
-    poly = atoi(args);
-
-    if (poly > 0 && poly < HEXTER_MAX_POLYPHONY) {
-        polyphony_global = poly;
-
-        snprintf(buffer, 4, "%d", poly);
-#ifdef DSSI_GLOBAL_CONFIGURE_PREFIX
-        lo_send(osc_host_address, osc_configure_path, "ss",
-                DSSI_GLOBAL_CONFIGURE_PREFIX "polyphony", buffer);
-#else
-        lo_send(osc_host_address, osc_configure_path, "ss", "global_polyphony",
-                buffer);
-#endif
     }
 }
 
@@ -231,8 +204,7 @@ static COMMAND commands[] = {
     { "pc",      command_program, "select patch (e.g. 'pc 3')" },
     { "load",    command_load,   "load patch bank (e.g. 'load <filename>')" },
     { "mono",    command_mono, "set monophonic mode (e.g. 'mono on')" },
-    { "poly",    command_poly, "set instance polyphony ('poly 8')" },
-    { "gpoly",   command_gpoly, "set global polyphony ('gpoly 16')" },
+    { "poly",    command_poly, "set polyphony ('poly 8')" },
     { "quit",    command_quit, "exit hexter_text" },
     { "help",    command_help, "print this help message" },
     { (char *)NULL, (rl_vcpfunc_t *)NULL, (char *)NULL }
@@ -437,23 +409,8 @@ update_polyphony(const char *value)
 
     if (poly > 0 && poly < HEXTER_MAX_POLYPHONY) {
 
-        polyphony_instance = poly;
+        polyphony = poly;
 
         /* if the UI is displaying the instance polyphony, it should be updated now. */
-    }
-}
-
-void
-update_global_polyphony(const char *value)
-{
-    int poly = atoi(value);
-
-    TUIDB_MESSAGE(DB_OSC, ": update_global_polyphony called with '%s'\n", value);
-
-    if (poly > 0 && poly < HEXTER_MAX_POLYPHONY) {
-
-        polyphony_global = poly;
-
-        /* if the UI is displaying the global polyphony, it should be updated now. */
     }
 }
