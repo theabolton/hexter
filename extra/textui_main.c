@@ -210,6 +210,9 @@ osc_control_handler(const char *path, const char *types, lo_arg **argv,
     TUIDB_MESSAGE(DB_OSC, " osc_control_handler: control %d now %f\n", port, value);
 
     /* -FIX- update_voice_widget(port, value); */
+    /* avoid 'not used' compiler warnings: */
+    (void)port;
+    (void)value;
 
     return 0;
 }
