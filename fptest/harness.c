@@ -1,6 +1,6 @@
 /* hexter fixed-point/floating-point speed test harness
  *
- * Copyright (C) 2011 Sean Bolton.
+ * Copyright (C) 2011, 2018 Sean Bolton.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as

@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer plugin
  *
- * Copyright (C) 2004, 2009, 2011, 2012 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2011, 2012, 2018 Sean Bolton and others.
  *
  * Portions of this file may have come from Juan Linietsky's
  * rx-saturno, copyright (C) 2002 by Juan Linietsky.

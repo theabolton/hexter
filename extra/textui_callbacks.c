@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer text-mode UI
  *
- * Copyright (C) 2004, 2009, 2012 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2012, 2018 Sean Bolton and others.
  *
  * Portions of this file came from readline 4.3, copyright
  * (c) 1987-2002 Free Software Foundation, Inc.

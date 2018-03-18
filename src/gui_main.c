@@ -1,6 +1,6 @@
 /* hexter DSSI software synthesizer GUI
  *
- * Copyright (C) 2004, 2009, 2011, 2012 Sean Bolton and others.
+ * Copyright (C) 2004, 2009, 2011, 2012, 2018 Sean Bolton and others.
  *
  * Portions of this file may have come from Chris Cannam and Steve
  * Harris's public domain DSSI example code.

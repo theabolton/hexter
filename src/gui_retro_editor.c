@@ -1,6 +1,6 @@
 /* Yamaha DX7 / TX7 Editor/Librarian
  *
- * Copyright (C) 1991, 1995, 1997, 1998, 2004, 2009, 2011 Sean Bolton.
+ * Copyright (C) 1991, 1995, 1997, 1998, 2004, 2009, 2011, 2018 Sean Bolton.
  *
  * This is a patch editor for the Yamaha DX7 and TX7. It started
  * out life on my Apple ][+, then I ported it to my Amiga, then to
