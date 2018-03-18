@@ -78,6 +78,7 @@ edit_buffer_t edit_buffer;
 
 int host_requested_quit = 0;
 int gui_test_mode = 0;
+gint update_request_timeout_tag;
 
 /* ==== OSC handling ==== */
 
@@ -288,6 +289,8 @@ update_request_timeout_callback(gpointer data)
 
     }
 
+    update_request_timeout_tag = 0; /* set to invalid, so we don't try to remove it later */
+
     return FALSE;  /* don't need to do this again */
 }
 
@@ -301,7 +304,6 @@ main(int argc, char *argv[])
     char *host, *port, *path, *tmp_url;
     lo_server osc_server;
     gint osc_server_socket_tag;
-    gint update_request_timeout_tag;
 
     DSSP_DEBUG_INIT("hexter_gtk");
 
@@ -405,7 +407,8 @@ main(int argc, char *argv[])
     }
 
     /* GTK+ cleanup */
-    gtk_timeout_remove(update_request_timeout_tag);
+    if (update_request_timeout_tag != 0)
+        gtk_timeout_remove(update_request_timeout_tag);
     gdk_input_remove(osc_server_socket_tag);
 
     /* say bye-bye */
