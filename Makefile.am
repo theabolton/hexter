@@ -3,7 +3,11 @@
 SUBDIRS = src
 
 EXTRA_DIST = \
+	README.rst \
 	autogen.sh \
+	doc/hexter-screenshot_main.jpg \
+	doc/hexter-screenshot_retro.jpg \
+	doc/hexter-screenshot_widgy.jpg \
 	extra/tx_edit.c \
 	extra/default_patches.dx7 \
 	extra/dx7_roms.dx7 \
