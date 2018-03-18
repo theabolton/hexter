@@ -1,3 +1,17 @@
+20180318 smbolton -- version 1.1.0
+
+* Switched to run_synth() instead of run_multiple_synths(), and removed the
+    global polyphony configuration setting. This makes hexter compatible
+    with hosts that don't implement run_multiple_synths(), such as Carla and
+    Renoise.
+
+* Removed compiler-specific optimization flags.
+
+* Fixed a crash of the widgy editor on ARM targets. Thanks to Andreas
+    Müller.
+
+* Converted the README to reStructuredText, complete with screenshots.
+
 20140610 smbolton -- version 1.0.3
 
 * Merged patch by Rui Nuno Capela, which fixed a use-after-free bug

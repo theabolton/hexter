@@ -35,7 +35,7 @@ The following people have assisted in hexter's development:
     Martin Tarenskeen contributed improvements to hexter's DX7 patch
     loading code.
 
-    Rui Nuno Capela squashed a crash-causing bug.
+    Rui Nuno Capela and Andreas Müller squashed crash-causing bugs.
 
 hexter is also very much the result of an ongoing cumulative effort
 by a large number of DX7 and synthesis enthusiasts, including:
