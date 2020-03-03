@@ -862,28 +862,30 @@ on_combo_changed(GtkComboBox *widget,
 }
 
 static void
+combo_box_append_text(GtkWidget *w, const char** labels)
+{
+    int i;
+    for (i = 0; labels[i]; i++)
+    {
+        gtk_combo_box_append_text(GTK_COMBO_BOX(w), labels[i]);
+    }
+}
+
+static void
 place_combo(GtkObject *adj, GtkWidget *table, int x, int y, int type)
 {
     /* -FIX- this is still kinda ugly */
-    const char* labelsLfoWave[] = { "Tri", "Saw+", "Saw-", "Square", "Sine", "S/H", NULL };
-    const char* labelsCurve[] = { "-Lin", "-Exp", "+Exp", "+Lin", NULL };
+    const char* labelsLfoWave[] = { "Tri", "Saw+", "Saw-", "Square", "Sine", "S/H", 0 };
+    const char* labelsCurve[] = { "-Lin", "-Exp", "+Exp", "+Lin", 0 };
 
-    int i;
     GtkWidget *w = gtk_combo_box_new_text();
-
     switch (type) {
       default:
       case PEPT_LFOWave:
-        for (i = 0; labelsLfoWave[i]; i++)
-        {
-            gtk_combo_box_append_text(GTK_COMBO_BOX(w), labelsLfoWave[i]);
-        }
+        combo_box_append_text(w, labelsLfoWave);
         break;
       case PEPT_Curve:
-        for (i = 0; labelsCurve[i]; i++)
-        {
-            gtk_combo_box_append_text(GTK_COMBO_BOX(w), labelsCurve[i]);
-        }
+        combo_box_append_text(w, labelsCurve);
         break;
     }
 
