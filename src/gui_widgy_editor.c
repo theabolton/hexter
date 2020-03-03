@@ -864,22 +864,29 @@ on_combo_changed(GtkComboBox *widget,
 static void
 place_combo(GtkObject *adj, GtkWidget *table, int x, int y, int type)
 {
-    const char **labels;
+    /* -FIX- this is still kinda ugly */
+    const char* labelsLfoWave[] = { "Tri", "Saw+", "Saw-", "Square", "Sine", "S/H", NULL };
+    const char* labelsCurve[] = { "-Lin", "-Exp", "+Exp", "+Lin", NULL };
+
     int i;
-    /* -FIX- this is kinda ugly */
+    GtkWidget *w = gtk_combo_box_new_text();
+
     switch (type) {
       default:
       case PEPT_LFOWave:
-        labels = (const char *[]){ "Tri", "Saw+", "Saw-", "Square", "Sine", "S/H", NULL };
+        for (i = 0; labelsLfoWave[i]; i++)
+        {
+            gtk_combo_box_append_text(GTK_COMBO_BOX(w), labelsLfoWave[i]);
+        }
         break;
       case PEPT_Curve:
-        labels = (const char *[]){ "-Lin", "-Exp", "+Exp", "+Lin", NULL };
+        for (i = 0; labelsCurve[i]; i++)
+        {
+            gtk_combo_box_append_text(GTK_COMBO_BOX(w), labelsCurve[i]);
+        }
         break;
     }
 
-    GtkWidget *w = gtk_combo_box_new_text();
-    for (i = 0; labels[i]; i++)
-        gtk_combo_box_append_text(GTK_COMBO_BOX(w), labels[i]);
     gtk_combo_box_set_active((GtkComboBox *)w, 0);
     gtk_table_attach (GTK_TABLE (table), w, x, x + 1, y, y + 1,
                       (GtkAttachOptions) (0),
