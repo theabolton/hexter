@@ -3,8 +3,9 @@ dnl Process this file with autoconf to produce a configure script.
 AC_INIT(hexter, 1.1.0, sean-at-smbolton-dot-com)
 
 AC_CONFIG_SRCDIR(src/hexter.c)
-AM_INIT_AUTOMAKE
-AM_CONFIG_HEADER(config.h)
+AM_INIT_AUTOMAKE([subdir-objects])
+AM_CONFIG_HEADER([config.h])
+AC_CONFIG_MACRO_DIRS([m4])
 
 AC_PROG_CC
 
