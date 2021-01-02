@@ -875,17 +875,17 @@ static void
 place_combo(GtkObject *adj, GtkWidget *table, int x, int y, int type)
 {
     /* -FIX- this is still kinda ugly */
-    const char* labelsLfoWave[] = { "Tri", "Saw+", "Saw-", "Square", "Sine", "S/H", 0 };
-    const char* labelsCurve[] = { "-Lin", "-Exp", "+Exp", "+Lin", 0 };
+    const char* labels_lfo_wave[] = { "Tri", "Saw+", "Saw-", "Square", "Sine", "S/H", 0 };
+    const char* labels_curve[] = { "-Lin", "-Exp", "+Exp", "+Lin", 0 };
 
     GtkWidget *w = gtk_combo_box_new_text();
     switch (type) {
       default:
       case PEPT_LFOWave:
-        combo_box_append_text(w, labelsLfoWave);
+        combo_box_append_text(w, labels_lfo_wave);
         break;
       case PEPT_Curve:
-        combo_box_append_text(w, labelsCurve);
+        combo_box_append_text(w, labels_curve);
         break;
     }
 
