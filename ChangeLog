@@ -1,3 +1,9 @@
+20210101 smbolton -- version 1.1.1
+
+* Fixed a segfault in hexter_gtk when compiled with gcc 9 or later. Thanks to
+    Martin Tarenskeen, Ben Hart, Alexandre Almeida, and Jean-michel Thiemonge
+    for the fix.
+
 20180318 smbolton -- version 1.1.0
 
 * Switched to run_synth() instead of run_multiple_synths(), and removed the
