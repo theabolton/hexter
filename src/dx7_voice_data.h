@@ -40,6 +40,7 @@ void dx7_patch_unpack(dx7_patch_t *packed_patch, uint8_t number,
                       uint8_t *unpacked_patch);
 void dx7_patch_pack(uint8_t *unpacked_patch, dx7_patch_t *packed_patch,
                     uint8_t number);
+int  hexter_file_patches_init(dx7_patch_t *patches);
 void hexter_data_patches_init(dx7_patch_t *patches);
 void hexter_data_performance_init(uint8_t *performance);
 
