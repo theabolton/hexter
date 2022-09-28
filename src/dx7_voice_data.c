@@ -33,6 +33,7 @@
 #include "hexter_types.h"
 #include "dx7_voice.h"
 #include "dx7_voice_data.h"
+#include "gui_data.h"
 
 /* in dx7_voice_patches.c: */
 extern int         friendly_patch_count;
@@ -434,6 +435,11 @@ dssp_error_message(const char *fmt, ...)
 void
 hexter_data_patches_init(dx7_patch_t *patches)
 {
+    /* Try loading from file first */
+    if ( hexter_file_patches_init(patches) == 1 ) {
+        return;
+    }
+
     int i;
 
     memcpy(patches, friendly_patches, friendly_patch_count * sizeof(dx7_patch_t));
@@ -442,6 +448,51 @@ hexter_data_patches_init(dx7_patch_t *patches)
         memcpy(&patches[i], &dx7_voice_init_voice, sizeof(dx7_patch_t));
     }
 }
+
+/*
+ * hexter_file_patches_init
+ *
+ * initialize the patch bank if HEXTER_DEFAULT_PATCH envar is set to a
+ * valid patch file.
+ */
+int
+hexter_file_patches_init(dx7_patch_t *patches)
+{
+    char *env = "HEXTER_DEFAULT_PATCH";
+    char *val = NULL;
+    int ret;
+    char *message;
+
+    val = getenv(env);
+
+    if (!val) {
+        fprintf(stderr, "%s is not defined, will load embedded friendly patches.\n",
+                        env);
+        return 0;
+    }
+
+    fprintf(stderr, "%s is defined, loading default patches from %s\n",
+                    env, val);
+
+    if (gui_data_load(val, 0, &message)) {
+
+        /* successfully loaded at least one patch */
+        fprintf(stderr, "Load Patch File succeeded: %s\n", message);
+        gui_data_send_dirty_patch_sections();
+        ret = 1;
+
+    } else {  /* didn't load anything successfully */
+
+        fprintf(stderr, "Load Patch File failed: %s\n", message);
+        ret = 0;
+
+    }
+    free(message);
+
+    return ret;
+
+}
+
 
 /*
  * hexter_data_performance_init
